@@ -1,0 +1,6 @@
+[package]
+name = "rpbtrir"
+version = "0.1.0"
+authors = ["Juha Komulainen <juha.komulainen@evident.fi>"]
+
+[dependencies]
