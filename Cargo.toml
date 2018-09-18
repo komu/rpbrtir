@@ -1,6 +1,10 @@
 [package]
 name = "rpbtrir"
 version = "0.1.0"
-authors = ["Juha Komulainen <juha.komulainen@evident.fi>"]
+authors = ["Juha Komulainen <komu@iki.fi>"]
 
 [dependencies]
+cgmath = "*"
+image = "*"
+rand = "*"
+bitflags = "*"

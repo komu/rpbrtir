@@ -2,3 +2,4 @@
 **/*.rs.bk
 /.idea/
 /rpbrtir.iml
+/images/output.png
