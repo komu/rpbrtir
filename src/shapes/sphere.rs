@@ -8,6 +8,7 @@ use core::{
 };
 use cgmath::{prelude::*, vec3};
 
+#[derive(Debug)]
 pub struct Sphere {
     object_to_world: Transform,
     world_to_object: Transform,
@@ -159,7 +160,7 @@ impl Shape for Sphere {
         }
     }
 
-    fn get_object_to_world(&self) -> Transform {
-        self.object_to_world.clone() // TODO avoid clone
+    fn get_object_to_world(&self) -> &Transform {
+        &self.object_to_world
     }
 }

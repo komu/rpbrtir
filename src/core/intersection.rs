@@ -2,7 +2,7 @@ use core::{
     differential_geometry::DifferentialGeometry,
     primitive::Primitive,
 };
-use core::geometry::Ray;
+use core::geometry::RayDifferential;
 use core::reflection::BSDF;
 use core::spectrum::Spectrum;
 use core::geometry::Vector3f;
@@ -26,12 +26,12 @@ impl<'a> Intersection<'a> {
         Intersection { primitive, dg, ray_epsilon, object_to_world }
     }
 
-    pub fn get_bsdf(&self, ray: &Ray) -> BSDF {
-//        dg.compute_differentials(ray); // TODO
+    pub fn get_bsdf(&self, ray: &RayDifferential) -> BSDF {
+        self.dg.compute_differentials(ray);
         self.primitive.get_bsdf(&self.dg, &self.object_to_world)
     }
 
-    pub fn le(&self, wo: Vector3f) -> Spectrum {
+    pub fn le(&self, _wo: Vector3f) -> Spectrum {
         Spectrum::black() // TODO
     }
 }

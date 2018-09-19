@@ -4,6 +4,7 @@ use std::ops::Mul;
 use std::ops::Div;
 use image::Rgb;
 use std::ops::Add;
+use std::iter::Sum;
 
 #[derive(Clone, Copy)]
 pub struct Spectrum {
@@ -100,3 +101,14 @@ impl Div<Float> for Spectrum {
         }
     }
 }
+
+impl Sum<Spectrum> for Spectrum {
+    fn sum<I: Iterator<Item=Spectrum>>(iter: I) -> Spectrum {
+        let mut sum = Spectrum::black();
+        for s in iter {
+            sum += s;
+        }
+        sum
+    }
+}
+

@@ -11,7 +11,7 @@ use core::transform::Transform;
 pub trait Primitive {
     fn intersect(&self, ray: &mut Ray) -> Option<Intersection>;
     fn intersect_p(&self, ray: &Ray) -> bool;
-    fn get_bsdf<'a>(&self, dg: &'a DifferentialGeometry<'a>, object_to_world: &Transform) -> BSDF<'a>;
+    fn get_bsdf<'a, 'b>(&'a self, dg: &'a DifferentialGeometry<'a>, object_to_world: &'b Transform) -> BSDF<'a>;
 }
 
 pub struct GeometricPrimitive {
@@ -36,7 +36,7 @@ impl Primitive for GeometricPrimitive {
 //            isect->WorldToObject = *shape->WorldToObject;
 //            isect->shapeId = shape->shapeId;
 //            isect->primitiveId = primitiveId;
-            let o2w = self.shape.get_object_to_world(); // TODO avoid copy
+            let o2w = self.shape.get_object_to_world().clone(); // TODO avoid copy
             Some(Intersection::new(self, dg, ray_epsilon, o2w))
         } else {
             None
@@ -47,8 +47,8 @@ impl Primitive for GeometricPrimitive {
         self.shape.intersect_p(ray)
     }
 
-    fn get_bsdf<'a>(&self, dg: &'a DifferentialGeometry<'a>, object_to_world: &Transform) -> BSDF<'a> {
-        let dgs = dg; // TODO self.shape.get_shading_geometry(object_to_world, dg);
+    fn get_bsdf<'a, 'b>(&'a self, dg: &'a DifferentialGeometry<'a>, object_to_world: &'b Transform) -> BSDF<'a> {
+        let dgs = self.shape.get_shading_geometry(object_to_world, dg);
         self.material.get_bsdf(dg, dgs)
     }
 }

@@ -2,7 +2,7 @@ use core::{
     integrator::{Integrator, SurfaceIntegrator, specular_reflect, specular_transmit},
     scene::Scene,
     renderer::Renderer,
-    geometry::Ray,
+    geometry::RayDifferential,
     intersection::Intersection,
     light::{LightSample, VisibilityTester},
     sampler::Sample,
@@ -27,31 +27,31 @@ impl SurfaceIntegrator for WhittedIntegrator {
     fn li(
         &self,
         scene: &Scene,
-        renderer: Option<&Renderer>,
-        ray: &Ray,
-        isect: &Intersection,
+        renderer: &Renderer,
+        rd: &RayDifferential,
+        isect: &mut Intersection,
         sample: Option<&Sample>,
-        rng: &RNG) -> Spectrum {
-
-        let mut l = Spectrum::black();
+        rng: &mut RNG) -> Spectrum {
 
         // Compute emitted and reflected light at ray intersection point
-
-        // Evaluate BSDF at hit point
-        let bsdf = isect.get_bsdf(ray);
-
-        // Initialize common variables for Whitted integrator
-        let p = bsdf.dg_shading.p;
-        let n = bsdf.dg_shading.nn;
-        let wo = -ray.d;
+        let wo = -rd.ray.d;
 
         // Compute emitted light if ray hit an area light source
-        l += isect.le(wo);
+        let mut l = isect.le(wo);
+
+        let ray_epsilon = isect.ray_epsilon;
+
+        // Evaluate BSDF at hit point
+        let bsdf = isect.get_bsdf(&rd);
+
+        // Initialize common variables for Whitted integrator
+        let p = &bsdf.dg_shading.p;
+        let n = &bsdf.dg_shading.nn;
 
         // Add contribution of each light source
         for light in &scene.lights {
             let mut visibility = VisibilityTester::new();
-            let (li, wi, pdf) = light.sample_l(&p, isect.ray_epsilon, LightSample::new(rng), ray.time, &mut visibility);
+            let (li, wi, pdf) = light.sample_l(p, ray_epsilon, LightSample::new(rng), rd.ray.time, &mut visibility);
             if li.is_black() || pdf == 0.0 {
                 continue;
             }
@@ -61,10 +61,10 @@ impl SurfaceIntegrator for WhittedIntegrator {
                 l += f * li * wi.dot(n.v).abs() * visibility.transmittance(scene, renderer, sample, rng) / pdf;
             }
         }
-        if ray.depth + 1 < self.max_depth {
+        if rd.ray.depth + 1 < self.max_depth {
             // Trace rays for specular reflection and refraction
-            l += specular_reflect(ray, &bsdf, rng, isect, renderer, scene, sample);
-            l += specular_transmit(ray, &bsdf, rng, isect, renderer, scene, sample);
+            l += specular_reflect(rd, &bsdf, rng, &isect, renderer, scene, sample);
+            l += specular_transmit(rd, &bsdf, rng, &isect, renderer, scene, sample);
         }
         l
     }

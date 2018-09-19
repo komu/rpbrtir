@@ -4,7 +4,7 @@ use core::{
 };
 use cgmath::{Matrix4, SquareMatrix, Transform as TransformCG};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Transform {
     m: Matrix4<Float>,
     m_inv: Matrix4<Float>,

@@ -28,3 +28,8 @@ pub fn radians(degrees: Float) -> Float {
 pub fn clamp(val: Float, low: Float, high: Float) -> Float {
     val.max(low).min(high)
 }
+
+#[inline]
+pub fn floor_to_int(val: Float) -> i32 {
+    val.floor() as i32
+}

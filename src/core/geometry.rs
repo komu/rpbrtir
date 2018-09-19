@@ -5,6 +5,7 @@ use cgmath::{vec3, prelude::*};
 pub type Point3f = Point3<Float>;
 pub type Vector3f = Vector3<Float>;
 
+#[derive(Clone, Debug)]
 pub struct Ray {
     pub o: Point3f,
     pub d: Vector3f,
@@ -19,8 +20,8 @@ impl Ray {
         Ray { o, d, mint, maxt, time, depth: 0 }
     }
 
-    pub fn new_simple(o: Point3f, d: Vector3f) -> Ray {
-        Ray::new(o, d, 0.0, INFINITY, 0.0)
+    pub fn new_with_parent(o: Point3f, d: Vector3f, parent: &Ray, mint: Float) -> Ray {
+        Ray { o, d, mint, maxt: INFINITY, time: parent.time, depth: parent.depth + 1 }
     }
 
     pub fn point_at(&self, t: Float) -> Point3f {
@@ -28,7 +29,36 @@ impl Ray {
     }
 }
 
-#[derive(Clone, Copy)]
+pub struct RayDifferential {
+    pub ray: Ray,
+    pub has_differentials: bool,
+}
+
+impl RayDifferential {
+    pub fn new(o: Point3f, d: Vector3f, mint: Float, maxt: Float, time: Float) -> RayDifferential {
+        RayDifferential {
+            ray: Ray::new(o, d, mint, maxt, time),
+            has_differentials: false,
+        }
+    }
+
+    pub fn from_ray(ray: Ray) -> RayDifferential {
+        RayDifferential { ray, has_differentials: false }
+    }
+
+    pub fn new_simple(o: Point3f, d: Vector3f) -> RayDifferential {
+        RayDifferential::new(o, d, 0.0, INFINITY, 0.0)
+    }
+
+    pub fn new_with_parent(o: Point3f, d: Vector3f, parent: &Ray, mint: Float) -> RayDifferential {
+        RayDifferential {
+            ray: Ray::new_with_parent(o, d, parent, mint),
+            has_differentials: false,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct Normal {
     pub v: Vector3f
 }

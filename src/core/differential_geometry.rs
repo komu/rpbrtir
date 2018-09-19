@@ -4,8 +4,10 @@ use core::{
     types::Float,
 };
 use cgmath::prelude::*;
+use core::geometry::RayDifferential;
+use std::cell::RefCell;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DifferentialGeometry<'a> {
     pub p: Point3f,
     pub nn: Normal,
@@ -16,6 +18,17 @@ pub struct DifferentialGeometry<'a> {
     pub uu: Float,
     pub vv: Float,
     pub sh: &'a Shape,
+    differentials: RefCell<Option<Differentials>>
+}
+
+#[derive(Clone, Debug)]
+struct Differentials {
+    dpdx: Vector3f,
+    dpdy: Vector3f,
+    dudx: Float,
+    dvdx: Float,
+    dudy: Float,
+    dvdy: Float,
 }
 
 impl<'a> DifferentialGeometry<'a> {
@@ -37,6 +50,16 @@ impl<'a> DifferentialGeometry<'a> {
             uu,
             vv,
             sh,
+            differentials: RefCell::new(None)
+        }
+    }
+
+    pub fn compute_differentials(&self, ray: &RayDifferential) {
+        if ray.has_differentials {
+            // TODO
+            unimplemented!()
+        } else {
+            self.differentials.replace(None);
         }
     }
 }

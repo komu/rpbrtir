@@ -1,10 +1,12 @@
 pub mod differential_geometry;
+pub mod film;
 pub mod geometry;
 pub mod integrator;
 pub mod intersection;
 pub mod light;
-pub mod math;
 pub mod material;
+pub mod math;
+pub mod montecarlo;
 pub mod primitive;
 pub mod reflection;
 pub mod renderer;

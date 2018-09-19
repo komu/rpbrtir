@@ -7,7 +7,7 @@ use core::{
 use core::sampler::Sample;
 use core::renderer::Renderer;
 use core::rng::RNG;
-use core::geometry::Ray;
+use core::geometry::{Ray, RayDifferential};
 use cgmath::prelude::*;
 
 pub trait Light {
@@ -19,6 +19,10 @@ pub trait Light {
         time: Float,
         visibility: &mut VisibilityTester)
         -> (Spectrum, Vector3f, Float);
+
+    fn le(&self, ray: &RayDifferential) -> Spectrum {
+        Spectrum::black()
+    }
 }
 
 pub struct LightSample {}
@@ -39,12 +43,15 @@ impl VisibilityTester {
     }
 
     pub fn unoccluded(&self, scene: &Scene) -> bool {
-        let ref ray = self.ray.as_ref().expect("no ray for VisibilityTester");
-        !scene.intersect_p(ray)
+        !scene.intersect_p(self.ray())
     }
 
-    pub fn transmittance(&self, scene: &Scene, renderer: Option<&Renderer>, sample: Option<&Sample>, rng: &RNG) -> Float {
-        1.0 // TODO
+    pub fn transmittance(&self, scene: &Scene, renderer: &Renderer, sample: Option<&Sample>, rng: &RNG) -> Float {
+        renderer.transmittance(scene, &RayDifferential::from_ray(self.ray().clone()), sample, rng)
+    }
+
+    fn ray(&self) -> &Ray {
+        self.ray.as_ref().expect("no ray for VisibilityTester")
     }
 
     pub fn set_segment(&mut self, p1: Point3f, eps1: Float, p2: Point3f, eps2: Float, time: Float) {

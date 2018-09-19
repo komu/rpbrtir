@@ -7,27 +7,27 @@ extern crate bitflags;
 pub mod core;
 pub mod integrators;
 pub mod lights;
+pub mod renderers;
 pub mod shapes;
 
 use core::{
-    shape::Shape,
     scene::Scene,
-    geometry::{Ray, Point3f},
+    geometry::{RayDifferential, Point3f},
     material::DummyMaterial,
     transform::Transform,
     types::Float,
+    primitive::GeometricPrimitive,
+    rng::RNG,
+    spectrum::Spectrum,
+    light::Light,
+    renderer::Renderer,
 };
 use shapes::sphere::Sphere;
+use lights::point::PointLight;
 use cgmath::{vec3, prelude::*};
 use cgmath::Matrix4;
 use image::ImageBuffer;
-use core::primitive::GeometricPrimitive;
-use integrators::whitted::WhittedIntegrator;
-use core::integrator::SurfaceIntegrator;
-use core::rng::RNG;
-use core::spectrum::Spectrum;
-use lights::point::PointLight;
-use core::light::Light;
+use renderers::samplerrenderer::SamplerRenderer;
 
 fn main() {
     let nx = 600;
@@ -37,9 +37,9 @@ fn main() {
     let horizontal = vec3(4.0, 0.0, 0.0);
     let vertical = vec3(0.0, 2.0, 0.0);
     let origin = Point3f::new(0.0, 0.0, 0.0);
-    let integrator = WhittedIntegrator::new(50);
     let scene = build_scene();
-    let rng = RNG {};
+    let mut rng = RNG::new();
+    let renderer = SamplerRenderer::new();
 
     let img = ImageBuffer::from_fn(nx, ny, |i, j| {
         let j = ny - j;
@@ -47,24 +47,11 @@ fn main() {
         let u = (i as Float) / (nx as Float);
         let v = (j as Float) / (ny as Float);
 
-        let mut r = Ray::new_simple(origin, lower_left_corner.to_vec() + u * horizontal + v * vertical);
-        color(&scene, &integrator, &mut r, &rng).to_rgb()
+        let mut r = RayDifferential::new_simple(origin, lower_left_corner.to_vec() + u * horizontal + v * vertical);
+        renderer.li(&scene, &mut r, None, &mut rng).to_rgb()
     });
 
     img.save("images/output.png").unwrap();
-}
-
-fn color(scene: &Scene, integrator: &SurfaceIntegrator, r: &mut Ray, rng: &RNG) -> Spectrum {
-    if let Some(isect) = scene.intersect(r) {
-        let spectrum = integrator.li(scene, None, r, &isect, None, rng);
-        return spectrum;
-//        let n = isect.dg.nn.v;
-//        return 0.5 * Spectrum::new(n.x + 1.0, n.y + 1.0, n.z + 1.0);
-    }
-
-    let unit_direction = r.d.normalize();
-    let t = 0.5 * (unit_direction.y + 1.0);
-    return (1.0 - t) * Spectrum::white() + t * Spectrum::new(0.5, 0.7, 1.0);
 }
 
 fn build_scene() -> Scene {
