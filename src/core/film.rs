@@ -2,7 +2,11 @@ use core::spectrum::Spectrum;
 use core::sampler::CameraSample;
 use core::types::Float;
 
-trait Film {
+pub trait Film {
+
+    // TODO: temporary
+    fn put_pixel(&mut self, x: u32, y: u32, l: &Spectrum);
+
     fn add_sample(&mut self, sample: &CameraSample, l: &Spectrum);
     fn splat(&mut self, sample: &CameraSample, l: &Spectrum);
 

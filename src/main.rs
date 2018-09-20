@@ -5,6 +5,7 @@ extern crate rand;
 extern crate bitflags;
 
 pub mod core;
+pub mod films;
 pub mod integrators;
 pub mod lights;
 pub mod renderers;
@@ -18,6 +19,7 @@ use core::{
     types::Float,
     primitive::GeometricPrimitive,
     rng::RNG,
+    film::Film,
     spectrum::Spectrum,
     light::Light,
     renderer::Renderer,
@@ -26,8 +28,8 @@ use shapes::sphere::Sphere;
 use lights::point::PointLight;
 use cgmath::{vec3, prelude::*};
 use cgmath::Matrix4;
-use image::ImageBuffer;
 use renderers::samplerrenderer::SamplerRenderer;
+use films::image::ImageFilm;
 
 fn main() {
     let nx = 600;
@@ -40,18 +42,23 @@ fn main() {
     let scene = build_scene();
     let mut rng = RNG::new();
     let renderer = SamplerRenderer::new();
+    let mut film = ImageFilm::new(String::from("images/output.png"), nx, ny);
 
-    let img = ImageBuffer::from_fn(nx, ny, |i, j| {
-        let j = ny - j;
+    for y in 0..ny {
+        for x in 0..nx {
+            let i = x;
+            let j = ny - y;
 
-        let u = (i as Float) / (nx as Float);
-        let v = (j as Float) / (ny as Float);
+            let u = (i as Float) / (nx as Float);
+            let v = (j as Float) / (ny as Float);
 
-        let mut r = RayDifferential::new_simple(origin, lower_left_corner.to_vec() + u * horizontal + v * vertical);
-        renderer.li(&scene, &mut r, None, &mut rng).to_rgb()
-    });
+            let mut r = RayDifferential::new_simple(origin, lower_left_corner.to_vec() + u * horizontal + v * vertical);
+            let li = renderer.li(&scene, &mut r, None, &mut rng);
+            film.put_pixel(x, y, &li);
+        }
+    }
 
-    img.save("images/output.png").unwrap();
+    film.write_image();
 }
 
 fn build_scene() -> Scene {
@@ -62,9 +69,6 @@ fn build_scene() -> Scene {
     let lights: Vec<Box<Light>> = vec![
         Box::new(PointLight::new(Point3f::new(0.5, 0.5, 0.0), Spectrum::new(1.0, 0.0, 0.0))),
         Box::new(PointLight::new(Point3f::new(-0.5, -0.5, 0.0), Spectrum::new(0.0, 0.9, 0.3))),
-//        Box::new(PointLight::new(Point3f::new(1.0, -2.0, 0.0), Spectrum::white())),
-//        Box::new(PointLight::new(Point3f::new(4.0, 3.0, 3.0), Spectrum::white())),
-//        Box::new(PointLight::new(Point3f::new(-4.0, -3.0, -3.0), Spectrum::white())),
     ];
     Scene::new(Box::new(primitive), lights)
 }
