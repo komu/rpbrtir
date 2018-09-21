@@ -13,7 +13,7 @@ pub trait Film {
     fn get_sample_extent(&self) -> Extent;
     fn get_pixel_extent(&self) -> Extent;
 
-    fn update_display(x0: u32, y0: u32, x1: u32, y1: u32, splat_scale: Float) {}
+    fn update_display(&self, x0: u32, y0: u32, x1: u32, y1: u32, splat_scale: Float) {}
 
     fn write_image_with_scale(&self, splat_scale: Float);
 
