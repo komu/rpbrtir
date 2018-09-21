@@ -8,7 +8,6 @@ use core::sampler::Sample;
 use core::renderer::Renderer;
 use core::rng::RNG;
 use core::geometry::{Ray, RayDifferential};
-use cgmath::prelude::*;
 use core::geometry::distance;
 
 pub trait Light {

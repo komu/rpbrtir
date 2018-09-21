@@ -52,3 +52,37 @@ impl Primitive for GeometricPrimitive {
         self.material.get_bsdf(dg, dgs)
     }
 }
+
+// TODO: simple temporary compound before accelerators are implemented
+pub struct CompoundPrimitive {
+    primitives: Vec<Box<Primitive>>
+}
+
+impl CompoundPrimitive {
+    pub fn new(primitives: Vec<Box<Primitive>>) -> CompoundPrimitive {
+        CompoundPrimitive { primitives }
+    }
+}
+
+impl Primitive for CompoundPrimitive {
+
+    fn intersect(&self, ray: &mut Ray) -> Option<Intersection> {
+        let mut best: Option<Intersection> = None;
+
+        for p in &self.primitives {
+            if let Some(isect) = p.intersect(ray) {
+                best = Some(isect);
+            }
+        }
+
+        best
+    }
+
+    fn intersect_p(&self, ray: &Ray) -> bool {
+        self.primitives.iter().any(|p| { p.intersect_p(ray) })
+    }
+
+    fn get_bsdf<'a, 'b>(&'a self, dg: &'a DifferentialGeometry<'a>, object_to_world: &'b Transform) -> BSDF<'a> {
+        panic!("get_bsdf should not be called for Aggregate")
+    }
+}
