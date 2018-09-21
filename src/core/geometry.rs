@@ -1,6 +1,7 @@
 use cgmath::{Point3, Vector3};
 use core::types::{Float, INFINITY};
 use cgmath::{vec3, prelude::*};
+use core::math::lerp;
 
 pub type Point3f = Point3<Float>;
 pub type Vector3f = Vector3<Float>;
@@ -74,6 +75,120 @@ impl Normal {
 }
 
 #[inline]
+pub fn distance(p1: &Point3f, p2: &Point3f) -> Float {
+    (p1 - p2).magnitude()
+}
+
+#[inline]
 pub fn distance_squared(p1: &Point3f, p2: &Point3f) -> Float {
     (p1 - p2).magnitude2()
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct BBox {
+    p_min: Point3f,
+    p_max: Point3f,
+}
+
+impl BBox {
+    pub fn new(p1: &Point3f, p2: Point3f) -> BBox {
+        BBox {
+            p_min: Point3f::new(p1.x.min(p2.x), p1.y.min(p2.y), p1.z.min(p2.z)),
+            p_max: Point3f::new(p1.x.max(p2.x), p1.y.max(p2.y), p1.z.max(p2.z)),
+        }
+    }
+
+    pub fn from_point(p: Point3f) -> BBox {
+        BBox { p_min: p, p_max: p }
+    }
+
+    pub fn union_point(&self, p: &Point3f) -> BBox {
+        BBox {
+            p_min: Point3f::new(self.p_min.x.min(p.x), self.p_min.y.min(p.y), self.p_min.z.min(p.z)),
+            p_max: Point3f::new(self.p_max.x.max(p.x), self.p_max.y.max(p.y), self.p_max.z.max(p.z)),
+        }
+    }
+
+    pub fn union(&self, b: &BBox) -> BBox {
+        BBox {
+            p_min: Point3f::new(self.p_min.x.min(b.p_min.x), self.p_min.y.min(b.p_min.y), self.p_min.z.min(b.p_min.z)),
+            p_max: Point3f::new(self.p_max.x.max(b.p_max.x), self.p_max.y.max(b.p_max.y), self.p_max.z.max(b.p_max.z)),
+        }
+    }
+
+    pub fn overlaps(&self, b: &BBox) -> bool {
+        let x = (self.p_max.x >= b.p_min.x) && (self.p_min.x <= b.p_max.x);
+        let y = (self.p_max.y >= b.p_min.y) && (self.p_min.y <= b.p_max.y);
+        let z = (self.p_max.z >= b.p_min.z) && (self.p_min.z <= b.p_max.z);
+        x && y && z
+    }
+
+    pub fn inside(&self, pt: &Point3f) -> bool {
+        pt.x >= self.p_min.x && pt.x <= self.p_max.x
+            && pt.y >= self.p_min.y && pt.y <= self.p_max.y
+            && pt.z >= self.p_min.z && pt.z <= self.p_max.z
+    }
+
+    pub fn expand(&mut self, delta: Float) {
+        let v = vec3(delta, delta, delta);
+        self.p_min -= v;
+        self.p_max += v;
+    }
+
+    pub fn surface_area(&self) -> Float {
+        let d = self.p_max - self.p_min;
+        2.0 * (d.x * d.y + d.x * d.z + d.y * d.z)
+    }
+
+    pub fn volume(&self) -> Float {
+        let d = self.p_max - self.p_min;
+        d.x * d.y * d.z
+    }
+
+    pub fn maximum_extent(&self) -> u8 {
+        let diag = self.p_max - self.p_min;
+        if diag.x > diag.y && diag.x > diag.z {
+            0
+        } else if diag.y > diag.z {
+            1
+        } else {
+            2
+        }
+    }
+
+    pub fn lerp(&self, tx: Float, ty: Float, tz: Float) -> Point3f {
+        Point3f::new(lerp(tx, self.p_min.x, self.p_max.x),
+                     lerp(ty, self.p_min.y, self.p_max.y),
+                     lerp(tz, self.p_min.z, self.p_max.z))
+    }
+
+    pub fn offset(&self, p: &Point3f) -> Vector3f {
+        vec3((p.x - self.p_min.x) / (self.p_max.x - self.p_min.x),
+             (p.y - self.p_min.y) / (self.p_max.y - self.p_min.y),
+             (p.z - self.p_min.z) / (self.p_max.z - self.p_min.z))
+    }
+
+    pub fn bounding_sphere(&self) -> (Point3f, Float) {
+        let c = Point3f::from_vec(0.5 * self.p_min.to_vec() + 0.5 * self.p_max.to_vec());
+        let rad = if self.inside(&c) { distance(&c, &self.p_max) } else { 0.0 };
+        (c, rad)
+    }
+
+    pub fn intersect_p(&self, ray: &Ray) -> Option<(Float, Float)> {
+        let inv_dir = Vector3::new(1.0, 1.0, 1.0).div_element_wise(ray.d);
+        let mut min_t = ray.mint;
+        let mut max_t = ray.maxt;
+
+        for i in 0..3 {
+            let a = (self.p_min[i] - ray.o[i]) * inv_dir[i];
+            let b = (self.p_max[i] - ray.o[i]) * inv_dir[i];
+
+            min_t = min_t.max(a.min(b));
+            max_t = max_t.min(a.max(b));
+
+            if min_t > max_t { return None; }
+        }
+
+        return Some((min_t, max_t));
+    }
 }

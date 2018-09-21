@@ -33,3 +33,9 @@ pub fn clamp(val: Float, low: Float, high: Float) -> Float {
 pub fn floor_to_int(val: Float) -> i32 {
     val.floor() as i32
 }
+
+#[inline]
+pub fn lerp(t: Float, v1: Float, v2: Float) -> Float {
+    (1.0 - t) * v1 + t * v2
+}
+
