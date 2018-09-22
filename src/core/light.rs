@@ -56,6 +56,8 @@ impl VisibilityTester {
 
     pub fn set_segment(&mut self, p1: Point3f, eps1: Float, p2: Point3f, eps2: Float, time: Float) {
         let dist = distance(&p1, &p2);
-        self.ray = Some(Ray::new(p1, (p2 - p1) / dist, eps1, dist * (1.0 - eps2), time));
+        let r = Ray::new(p1, (p2 - p1) / dist, eps1, dist * (1.0 - eps2), time);
+        debug_assert!(!r.has_nans());
+        self.ray = Some(r);
     }
 }

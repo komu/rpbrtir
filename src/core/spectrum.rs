@@ -5,6 +5,7 @@ use std::ops::Div;
 use image::Rgb;
 use std::ops::Add;
 use std::iter::Sum;
+use core::math::clamp;
 
 #[derive(Clone, Copy)]
 pub struct Spectrum {
@@ -24,15 +25,18 @@ impl Spectrum {
     pub fn white() -> Spectrum {
         Spectrum::new(1.0, 1.0, 1.0)
     }
+    pub fn green() -> Spectrum {
+        Spectrum::new(0.0, 1.0, 0.0)
+    }
 
     pub fn is_black(&self) -> bool {
         self.r == 0.0 && self.g == 0.0 && self.b == 0.0
     }
 
     pub fn to_rgb(&self) -> Rgb<u8> {
-        let ir = (255.99 * self.r) as u8;
-        let ig = (255.99 * self.g) as u8;
-        let ib = (255.99 * self.b) as u8;
+        let ir = (255.99 * clamp(self.r, 0.0, 1.0)) as u8;
+        let ig = (255.99 * clamp(self.g, 0.0, 1.0)) as u8;
+        let ib = (255.99 * clamp(self.b, 0.0, 1.0)) as u8;
 
         Rgb([ir, ig, ib])
     }

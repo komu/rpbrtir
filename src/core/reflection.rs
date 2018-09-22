@@ -66,12 +66,12 @@ impl<'a> BSDF<'a> {
             .sum()
     }
 
-    pub fn sample_f(&self, wo_w: &Vector3f, bsdf_sample: BSDFSample, mut flags: BxDFType) -> (Spectrum, Option<Vector3f>, Float, BxDFType) {
+    pub fn sample_f(&self, wo_w: &Vector3f, bsdf_sample: BSDFSample, mut flags: BxDFType) -> Option<(Spectrum, Vector3f, Float, BxDFType)> {
         // Choose which _BxDF_ to sample
         let matching_comps = self.num_components(flags);
 
         if matching_comps == 0 {
-            return (Spectrum::black(), None, 0.0, BxDFType::empty());
+            return None
         }
 
         let which = floor_to_int(bsdf_sample.u_component * matching_comps as Float).min(matching_comps as i32 - 1) as usize;
@@ -84,7 +84,7 @@ impl<'a> BSDF<'a> {
         let (mut f, mut pdf) = bxdf.sample_f(wo, &mut wi, bsdf_sample.u_dir[0], bsdf_sample.u_dir[1]);
 
         if pdf == 0.0 {
-            return (Spectrum::black(), None, 0.0, BxDFType::empty());
+            return None
         }
 
         let sampled_type = bxdf.bxdf_type();
@@ -100,7 +100,7 @@ impl<'a> BSDF<'a> {
         }
 
         if matching_comps > 1 {
-            pdf /= matching_comps as f32;
+            pdf /= matching_comps as Float;
         }
 
         // Compute value of BSDF for sampled direction
@@ -120,7 +120,7 @@ impl<'a> BSDF<'a> {
             }
         }
 
-        return (f, Some(wi_w), pdf, sampled_type);
+        return Some((f, wi_w, pdf, sampled_type))
     }
 
     fn num_components(&self, flags: BxDFType) -> usize {
@@ -144,8 +144,8 @@ impl<'a> BSDF<'a> {
 
 pub trait BxDF {
     fn matches_flags(&self, flags: BxDFType) -> bool {
-        true
-//        (self.bxdf_type().bits & flags.bits) == self.bxdf_type().bits
+//        true
+        (self.bxdf_type().bits & flags.bits) == self.bxdf_type().bits
     }
 
     fn f(&self, wo: &Vector3f, wi: &Vector3f) -> Spectrum;

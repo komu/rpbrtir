@@ -21,8 +21,11 @@ pub trait Film {
         self.write_image_with_scale(1.0)
     }
 
-    fn x_resolution(&self) -> u32;
-    fn y_resolution(&self) -> u32;
+    fn resolution(&self) -> (u32, u32);
+    fn aspect_ratio(&self) -> Float {
+        let (x, y) = self.resolution();
+        (x as Float) / (y as Float)
+    }
 }
 
 pub struct Extent {

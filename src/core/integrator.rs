@@ -29,7 +29,7 @@ pub fn specular_reflect(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect
     let p = bsdf.dg_shading.p;
     let n = &bsdf.dg_shading.nn;
 
-    if let (f, Some(wi), pdf, _) = bsdf.sample_f(&wo, BSDFSample::new(rng), BxDFType::BSDF_REFLECTION | BxDFType::BSDF_SPECULAR) {
+    if let Some((f, wi, pdf, _)) = bsdf.sample_f(&wo, BSDFSample::new(rng), BxDFType::BSDF_REFLECTION | BxDFType::BSDF_SPECULAR) {
         if pdf > 0.0 && !f.is_black() && wi.dot(n.v).abs() != 0.0 {
             // TODO: Compute ray differential _rd_ for specular reflection
             let mut rd = RayDifferential::new_with_parent(p, wi, ray, isect.ray_epsilon);

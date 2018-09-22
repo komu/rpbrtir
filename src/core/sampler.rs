@@ -3,9 +3,9 @@ use core::types::Float;
 pub struct Sample {}
 
 pub struct CameraSample {
-    image_x: Float,
-    image_y: Float,
-    lens_u: Float,
-    lens_v: Float,
-    time: Float,
+    pub image_x: Float,
+    pub image_y: Float,
+    pub lens_u: Float,
+    pub lens_v: Float,
+    pub time: Float,
 }

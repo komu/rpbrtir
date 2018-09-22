@@ -28,23 +28,35 @@ impl Ray {
     pub fn point_at(&self, t: Float) -> Point3f {
         self.o + t * self.d
     }
+
+    pub fn has_nans(&self) -> bool {
+        self.o.x.is_nan() || self.o.y.is_nan() || self.o.z.is_nan()
+    }
 }
 
 pub struct RayDifferential {
     pub ray: Ray,
     pub has_differentials: bool,
+    pub rx_origin: Point3f,
+    pub ry_origin: Point3f,
+    pub rx_direction: Vector3f,
+    pub ry_direction: Vector3f
 }
 
 impl RayDifferential {
     pub fn new(o: Point3f, d: Vector3f, mint: Float, maxt: Float, time: Float) -> RayDifferential {
-        RayDifferential {
-            ray: Ray::new(o, d, mint, maxt, time),
-            has_differentials: false,
-        }
+        RayDifferential::from_ray(Ray::new(o, d, mint, maxt, time))
     }
 
     pub fn from_ray(ray: Ray) -> RayDifferential {
-        RayDifferential { ray, has_differentials: false }
+        RayDifferential {
+            ray,
+            has_differentials: false,
+            rx_origin: Point3f::new(0.0, 0.0, 0.0),
+            ry_origin: Point3f::new(0.0, 0.0, 0.0),
+            rx_direction: vec3(1.0, 0.0, 0.0),
+            ry_direction: vec3(0.0, 1.0, 0.0),
+        }
     }
 
     pub fn new_simple(o: Point3f, d: Vector3f) -> RayDifferential {
@@ -55,7 +67,15 @@ impl RayDifferential {
         RayDifferential {
             ray: Ray::new_with_parent(o, d, parent, mint),
             has_differentials: false,
+            rx_origin: Point3f::new(0.0, 0.0, 0.0),
+            ry_origin: Point3f::new(0.0, 0.0, 0.0),
+            rx_direction: vec3(1.0, 0.0, 0.0),
+            ry_direction: vec3(0.0, 1.0, 0.0),
         }
+    }
+
+    pub fn has_nans(&self) -> bool {
+        self.ray.has_nans()
     }
 }
 

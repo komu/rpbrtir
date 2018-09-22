@@ -7,25 +7,25 @@ use core::sampler::Sample;
 use core::rng::RNG;
 use core::spectrum::Spectrum;
 use core::types::{Float};
-use core::film::Film;
-use cgmath::{vec3, prelude::*};
+use cgmath::vec3;
+use core::camera::Camera;
+use core::sampler::CameraSample;
 
 pub struct SamplerRenderer<'a> {
     integrator: Box<SurfaceIntegrator>,
-    film: &'a mut Film
+    camera: &'a mut Camera
 }
 
 impl <'a> SamplerRenderer<'a> {
-    pub fn new(film: &mut Film) -> SamplerRenderer {
+    pub fn new(camera: &mut Camera) -> SamplerRenderer {
         SamplerRenderer {
             integrator: Box::new(WhittedIntegrator::new(50)),
-            film
+            camera
         }
     }
 
     pub fn render(&mut self, scene: &Scene) {
-        let ny = self.film.y_resolution();
-        let nx = self.film.x_resolution();
+        let (nx, ny) = self.camera.get_film().resolution();
         let lower_left_corner = Point3f::new(-2.0, -1.0, -1.0);
         let horizontal = vec3(4.0, 0.0, 0.0);
         let vertical = vec3(0.0, 2.0, 0.0);
@@ -37,12 +37,21 @@ impl <'a> SamplerRenderer<'a> {
                 let i = x;
                 let j = ny - y;
 
-                let u = (i as Float) / (nx as Float);
-                let v = (j as Float) / (ny as Float);
+                let sample = CameraSample {
+                    image_x: x as Float,
+                    image_y: y as Float,
+                    lens_u: 0.0, // TODO
+                    lens_v: 0.0,
+                    time: 0.0
+                };
 
-                let mut r = RayDifferential::new_simple(origin, lower_left_corner.to_vec() + u * horizontal + v * vertical);
+                let (mut r, _) = self.camera.generate_ray_differential(&sample);
+//                let mut r = RayDifferential::new_simple(origin, lower_left_corner.to_vec() + u * horizontal + v * vertical);
+                r.has_differentials = false; // TODO disable differentials because they are not fully supported
                 let li = self.li(&scene, &mut r, None, &mut rng);
-                self.film.put_pixel(x, y, &li);
+
+//                self.camera.get_film().add_sample(&sample, &li);
+                self.camera.get_film().put_pixel(x, y, &li);
             }
         }
     }

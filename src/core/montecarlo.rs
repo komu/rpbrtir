@@ -10,7 +10,7 @@ pub fn cosine_sample_hemisphere(u1: Float, u2: Float) -> Vector3f {
 }
 
 
-fn concentric_sample_disk(u1: Float, u2: Float) -> (Float, Float) {
+pub fn concentric_sample_disk(u1: Float, u2: Float) -> (Float, Float) {
     // Map uniform random numbers to $[-1,1]^2$
     let sx = 2.0 * u1 - 1.0;
     let sy = 2.0 * u2 - 1.0;

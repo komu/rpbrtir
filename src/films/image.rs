@@ -44,11 +44,7 @@ impl Film for ImageFilm {
         self.img.save(&self.path).expect("failed to write image");
     }
 
-    fn x_resolution(&self) -> u32 {
-        self.x_resolution
-    }
-
-    fn y_resolution(&self) -> u32 {
-        self.y_resolution
+    fn resolution(&self) -> (u32, u32) {
+        (self.x_resolution, self.y_resolution)
     }
 }

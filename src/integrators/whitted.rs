@@ -52,6 +52,7 @@ impl SurfaceIntegrator for WhittedIntegrator {
         for light in &scene.lights {
             let mut visibility = VisibilityTester::new();
             let (li, wi, pdf) = light.sample_l(p, ray_epsilon, LightSample::new(rng), rd.ray.time, &mut visibility);
+
             if li.is_black() || pdf == 0.0 {
                 continue;
             }

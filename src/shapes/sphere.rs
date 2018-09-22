@@ -53,9 +53,10 @@ impl Shape for Sphere {
     #[allow(non_snake_case)]
     fn intersect(&self, r: &Ray) -> Option<(DifferentialGeometry, Float, Float)> {
         let ray = self.world_to_object.transform_ray(r);
+        let oc = ray.o.to_vec();
         let a = ray.d.dot(ray.d);
-        let b = 2.0 * (ray.d.x * ray.o.x + ray.d.y * ray.o.y + ray.d.z * ray.o.z);
-        let c = ray.o.x * ray.o.x + ray.o.y * ray.o.y + ray.o.z * ray.o.z - self.radius * self.radius;
+        let b = 2.0 * ray.d.dot(oc);
+        let c = oc.dot(oc) - self.radius * self.radius;
 
         // Solve quadratic equation for _t_ values
         if let Some((t0, t1)) = solve_quadratic(a, b, c) {
