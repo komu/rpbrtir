@@ -6,6 +6,7 @@ use core::{
 use cgmath::prelude::*;
 use core::geometry::RayDifferential;
 use std::cell::RefCell;
+use core::transform::solve_linear_system_2x2;
 
 #[derive(Clone, Debug)]
 pub struct DifferentialGeometry<'a> {
@@ -18,17 +19,17 @@ pub struct DifferentialGeometry<'a> {
     pub uu: Float,
     pub vv: Float,
     pub sh: &'a Shape,
-    differentials: RefCell<Option<Differentials>>
+    pub differentials: RefCell<Option<Differentials>>,
 }
 
 #[derive(Clone, Debug)]
-struct Differentials {
-    dpdx: Vector3f,
-    dpdy: Vector3f,
-    dudx: Float,
-    dvdx: Float,
-    dudy: Float,
-    dvdy: Float,
+pub struct Differentials {
+    pub dpdx: Vector3f,
+    pub dpdy: Vector3f,
+    pub dudx: Float,
+    pub dvdx: Float,
+    pub dudy: Float,
+    pub dvdy: Float,
 }
 
 impl<'a> DifferentialGeometry<'a> {
@@ -50,14 +51,60 @@ impl<'a> DifferentialGeometry<'a> {
             uu,
             vv,
             sh,
-            differentials: RefCell::new(None)
+            differentials: RefCell::new(None),
         }
     }
 
     pub fn compute_differentials(&self, ray: &RayDifferential) {
-        if ray.differentials.is_some() {
-            // TODO
-            unimplemented!()
+        if let Some(ref diff) = ray.differentials {
+            // Estimate screen space change in $\pt{}$ and $(u,v)$
+
+            // Compute auxiliary intersection points with plane
+            let d = -self.nn.v.dot(self.p.to_vec());
+            let rxv = diff.rx_origin.to_vec();
+            let tx = -(self.nn.v.dot(rxv) + d) / self.nn.v.dot(diff.rx_direction);
+            if tx.is_nan() {
+                self.differentials.replace(None);
+                return;
+            }
+            let px = diff.rx_origin + tx * diff.rx_direction;
+            let ryv = diff.ry_origin.to_vec();
+            let ty = -(self.nn.v.dot(ryv) + d) / self.nn.v.dot(diff.ry_direction);
+            if ty.is_nan() {
+                self.differentials.replace(None);
+                return;
+            }
+            let py = diff.ry_origin + ty * diff.ry_direction;
+            let dpdx = px - self.p;
+            let dpdy = py - self.p;
+
+            // Compute $(u,v)$ offsets at auxiliary points
+
+            let axes = if self.nn.v.x.abs() > self.nn.v.y.abs() && self.nn.v.x.abs() > self.nn.v.z.abs() {
+                [1, 2]
+            } else if self.nn.v.y.abs() > self.nn.v.z.abs() {
+                [0, 2]
+            } else {
+                [0, 1]
+            };
+
+            // Initialize matrices for chosen projection plane
+            // Initialize _A_, _Bx_, and _By_ matrices for offset computation
+            let a = [[self.dpdu[axes[0]], self.dpdv[axes[0]]], [self.dpdu[axes[1]], self.dpdv[axes[1]]]];
+            let bx = [px[axes[0]] - self.p[axes[0]], px[axes[1]] - self.p[axes[1]]];
+            let by = [py[axes[0]] - self.p[axes[0]], py[axes[1]] - self.p[axes[1]]];
+
+            let (dudx, dvdx) = solve_linear_system_2x2(&a, &bx).unwrap_or((0.0, 0.0));
+            let (dudy, dvdy) = solve_linear_system_2x2(&a, &by).unwrap_or((0.0, 0.0));
+
+            self.differentials.replace(Some(Differentials {
+                dpdx,
+                dpdy,
+                dudx,
+                dvdx,
+                dudy,
+                dvdy,
+            }));
         } else {
             self.differentials.replace(None);
         }

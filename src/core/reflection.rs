@@ -15,7 +15,7 @@ pub struct BSDF<'a> {
     ng: Normal,
     sn: Vector3f,
     tn: Vector3f,
-    eta: Float,
+    pub eta: Float,
     bxdfs: Vec<Box<BxDF>>,
 }
 

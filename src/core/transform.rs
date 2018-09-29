@@ -80,14 +80,14 @@ impl<'a> Mul<&'a Transform> for Transform {
 pub fn scale(x: Float, y: Float, z: Float) -> Transform {
     Transform {
         m: Matrix4::from_nonuniform_scale(x, y, z),
-        m_inv: Matrix4::from_nonuniform_scale(1.0 / x, 1.0 / y, 1.0 / z)
+        m_inv: Matrix4::from_nonuniform_scale(1.0 / x, 1.0 / y, 1.0 / z),
     }
 }
 
 pub fn translate(delta: &Vector3f) -> Transform {
     Transform {
         m: Matrix4::from_translation(*delta),
-        m_inv: Matrix4::from_translation(-*delta)
+        m_inv: Matrix4::from_translation(-*delta),
     }
 }
 
@@ -126,4 +126,18 @@ pub fn look_at(pos: &Point3f, look: &Point3f, up: &Vector3f) -> Transform {
         m: cam_to_world.invert().unwrap(),
         m_inv: cam_to_world,
     }
+}
+
+// Matrix4x4 Method Definitions
+pub fn solve_linear_system_2x2(a: &[[Float; 2]; 2], b: &[Float; 2]) -> Option<(Float, Float)> {
+    let det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
+    if det.abs() < 1e-10 {
+        return None;
+    }
+    let x0 = (a[1][1] * b[0] - a[0][1] * b[1]) / det;
+    let x1 = (a[0][0] * b[1] - a[1][0] * b[0]) / det;
+    if x0.is_nan() || x1.is_nan() {
+        return None;
+    }
+    return Some((x0, x1));
 }
