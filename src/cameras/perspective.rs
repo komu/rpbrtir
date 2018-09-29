@@ -10,6 +10,7 @@ use core::transform::perspective;
 use core::geometry::RayDifferential;
 use core::types::INFINITY;
 use core::montecarlo::concentric_sample_disk;
+use core::geometry::RayDifferentials;
 
 pub struct PerspectiveCamera<'a> {
     film: &'a mut Film,
@@ -99,53 +100,60 @@ impl<'a> Camera for PerspectiveCamera<'a> {
         let pcamera = self.raster_to_camera.transform_point(pras);
 
         let dir = pcamera.to_vec().normalize();
-        let mut rd = RayDifferential::new(Point3f::new(0.0, 0.0, 0.0), dir, 0.0, INFINITY, sample.time);
+        let mut ray = Ray::new(Point3f::new(0.0, 0.0, 0.0), dir, 0.0, INFINITY, sample.time);
 
         // Modify ray for depth of field
         if self.lens_radius > 0.0 {
             // Sample point on lens
-            let (mut lens_u, mut lens_v) = concentric_sample_disk(sample.lens_u, sample.lens_v);
-            lens_u *= self.lens_radius;
-            lens_v *= self.lens_radius;
+            let (lens_u, lens_v) = concentric_sample_disk(sample.lens_u, sample.lens_v);
+            let origin = Point3f::new(lens_u * self.lens_radius, lens_v * self.lens_radius, 0.0);
 
             // Compute point on plane of focus
-            let ft = self.focal_distance / rd.ray.d.z;
-            let pfocus = rd.ray.point_at(ft);
+            let ft = self.focal_distance / ray.d.z;
+            let pfocus = ray.point_at(ft);
 
             // Update ray for effect of lens
-            rd.ray.o = Point3f::new(lens_u, lens_v, 0.0);
-            rd.ray.d = (pfocus - rd.ray.o).normalize();
+            ray.o = origin;
+            ray.d = (pfocus - ray.o).normalize();
         }
 
         // Compute offset rays for _PerspectiveCamera_ ray differentials
-        if self.lens_radius > 0.0 {
+        let differentials = if self.lens_radius > 0.0 {
             // Compute _PerspectiveCamera_ ray differentials with defocus blur
 
             // Sample point on lens
-            let (mut lens_u, mut lens_v) = concentric_sample_disk(sample.lens_u, sample.lens_v);
-            lens_u *= self.lens_radius;
-            lens_v *= self.lens_radius;
+            let (lens_u, lens_v) = concentric_sample_disk(sample.lens_u, sample.lens_v);
+            let origin = Point3f::new(lens_u * self.lens_radius, lens_v * self.lens_radius, 0.0);
 
             let dx = (pcamera + self.dx_camera).to_vec().normalize();
-            let mut ft = self.focal_distance / dx.z;
-            let mut p_focus = Point3f::new(0.0, 0.0, 0.0) + (ft * dx);
-            rd.rx_origin = Point3f::new(lens_u, lens_v, 0.0);
-            rd.rx_direction = (p_focus - rd.rx_origin).normalize();
-
             let dy = (pcamera + self.dy_camera).to_vec().normalize();
-            ft = self.focal_distance / dy.z;
-            p_focus = Point3f::new(0.0, 0.0, 0.0) + (ft * dy);
-            rd.ry_origin = Point3f::new(lens_u, lens_v, 0.0);
-            rd.ry_direction = (p_focus - rd.ry_origin).normalize();
-        } else {
-            rd.rx_origin = rd.ray.o;
-            rd.ry_origin = rd.ray.o;
-            rd.rx_direction = (pcamera.to_vec() + self.dx_camera).normalize();
-            rd.ry_direction = (pcamera.to_vec() + self.dy_camera).normalize();
-        }
 
-        rd.ray = self.camera_to_world.transform_ray(&rd.ray);
-        rd.has_differentials = true;
+            let ft_x = self.focal_distance / dx.z;
+            let ft_y = self.focal_distance / dy.z;
+
+            let p_focus_x = Point3f::new(0.0, 0.0, 0.0) + (ft_x * dx);
+            let p_focus_y = Point3f::new(0.0, 0.0, 0.0) + (ft_y * dy);
+
+            RayDifferentials {
+                rx_origin: origin,
+                ry_origin: origin,
+                rx_direction: (p_focus_x - origin).normalize(),
+                ry_direction: (p_focus_y - origin).normalize()
+            }
+        } else {
+            RayDifferentials {
+                rx_origin: ray.o,
+                ry_origin: ray.o,
+                rx_direction: (pcamera.to_vec() + self.dx_camera).normalize(),
+                ry_direction: (pcamera.to_vec() + self.dy_camera).normalize(),
+            }
+        };
+
+        let rd = RayDifferential {
+            ray: self.camera_to_world.transform_ray(&ray),
+            differentials: Some(differentials)
+        };
+
         return (rd, 1.0);
     }
 

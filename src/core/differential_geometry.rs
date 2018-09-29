@@ -55,7 +55,7 @@ impl<'a> DifferentialGeometry<'a> {
     }
 
     pub fn compute_differentials(&self, ray: &RayDifferential) {
-        if ray.has_differentials {
+        if ray.differentials.is_some() {
             // TODO
             unimplemented!()
         } else {

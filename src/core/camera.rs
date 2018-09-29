@@ -2,6 +2,7 @@ use core::sampler::CameraSample;
 use core::geometry::{Ray, RayDifferential};
 use core::types::Float;
 use core::film::Film;
+use core::geometry::RayDifferentials;
 
 pub trait Camera {
     fn generate_ray(&self, sample: &CameraSample) -> (Ray, Float);
@@ -17,11 +18,12 @@ pub trait Camera {
 
         let rd = RayDifferential {
             ray,
-            has_differentials: true,
-            rx_origin: rx.o,
-            rx_direction: rx.d,
-            ry_origin: ry.o,
-            ry_direction:ry.d
+            differentials: Some(RayDifferentials {
+                rx_origin: rx.o,
+                rx_direction: rx.d,
+                ry_origin: ry.o,
+                ry_direction: ry.d,
+            }),
         };
 
         return (rd, wt);
@@ -30,4 +32,4 @@ pub trait Camera {
     fn get_film(&mut self) -> &mut Film;
 }
 
-pub trait ProjectiveCamera : Camera { }
+pub trait ProjectiveCamera: Camera {}

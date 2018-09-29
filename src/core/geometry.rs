@@ -36,7 +36,10 @@ impl Ray {
 
 pub struct RayDifferential {
     pub ray: Ray,
-    pub has_differentials: bool,
+    pub differentials: Option<RayDifferentials>
+}
+
+pub struct RayDifferentials {
     pub rx_origin: Point3f,
     pub ry_origin: Point3f,
     pub rx_direction: Vector3f,
@@ -49,14 +52,7 @@ impl RayDifferential {
     }
 
     pub fn from_ray(ray: Ray) -> RayDifferential {
-        RayDifferential {
-            ray,
-            has_differentials: false,
-            rx_origin: Point3f::new(0.0, 0.0, 0.0),
-            ry_origin: Point3f::new(0.0, 0.0, 0.0),
-            rx_direction: vec3(1.0, 0.0, 0.0),
-            ry_direction: vec3(0.0, 1.0, 0.0),
-        }
+        RayDifferential { ray, differentials: None }
     }
 
     pub fn new_simple(o: Point3f, d: Vector3f) -> RayDifferential {
@@ -64,14 +60,7 @@ impl RayDifferential {
     }
 
     pub fn new_with_parent(o: Point3f, d: Vector3f, parent: &Ray, mint: Float) -> RayDifferential {
-        RayDifferential {
-            ray: Ray::new_with_parent(o, d, parent, mint),
-            has_differentials: false,
-            rx_origin: Point3f::new(0.0, 0.0, 0.0),
-            ry_origin: Point3f::new(0.0, 0.0, 0.0),
-            rx_direction: vec3(1.0, 0.0, 0.0),
-            ry_direction: vec3(0.0, 1.0, 0.0),
-        }
+        RayDifferential { ray: Ray::new_with_parent(o, d, parent, mint), differentials: None }
     }
 
     pub fn has_nans(&self) -> bool {

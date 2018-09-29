@@ -46,8 +46,7 @@ impl <'a> SamplerRenderer<'a> {
                 };
 
                 let (mut r, _) = self.camera.generate_ray_differential(&sample);
-//                let mut r = RayDifferential::new_simple(origin, lower_left_corner.to_vec() + u * horizontal + v * vertical);
-                r.has_differentials = false; // TODO disable differentials because they are not fully supported
+                r.differentials = None; // TODO disable differentials because they are not fully supported
                 let li = self.li(&scene, &mut r, None, &mut rng);
 
 //                self.camera.get_film().add_sample(&sample, &li);
