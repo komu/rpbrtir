@@ -51,7 +51,7 @@ fn main() {
     let mut film = ImageFilm::new(String::from("images/output.png"), 600, 300);
     let origin = Point3f::new(0.0, 0.0, 0.0);
 
-    let cam_to_world = look_at(&origin, &Point3f::new(0.0, 0.0, -1.0), &vec3(0.0, 1.0, 0.0));
+    let cam_to_world = look_at(&origin, &Point3f::new(0.0, 0.0, 1.0), &vec3(0.0, 1.0, 0.0));
 
     let aspect_ratio = film.aspect_ratio();
     let screen = if aspect_ratio > 1.0 {
@@ -83,18 +83,18 @@ fn color(r: &Ray) -> Spectrum {
 
 fn build_scene() -> Scene {
     let mut primitives: Vec<Box<Primitive>> = vec!(
-        Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, 0.0, -1.0), 0.5)), dummy_material())),
-//        Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(1.0, 0.0, -1.0), 0.2)), dummy_material()))
+        Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, 0.2, 2.0), 0.5)), dummy_material())),
+        Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.5, -0.2, 1.4), 0.2)), dummy_material()))
     );
 
     for _ in 0..10 {
-        primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-1.0 + 2.0 * random::<Float>(), 0.0, -1.0 + 2.0 * random::<Float>()), 0.2)), dummy_material())));
+//        primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-1.0 + 2.0 * random::<Float>(), 0.0, -1.0 + 2.0 * random::<Float>()), 0.2)), dummy_material())));
     }
 
     let lights: Vec<Box<Light>> = vec![
         Box::new(PointLight::new(Point3f::new(-0.5, -0.5, 0.0), Spectrum::new(0.0, 0.5, 0.0))),
-        Box::new(PointLight::new(Point3f::new(0.5, 0.5, 0.0), Spectrum::new(0.0, 0.0, 0.5))),
-        Box::new(PointLight::new(Point3f::new(0.2, 0.2, 0.0), Spectrum::new(0.7, 0.7, 0.7))),
+//        Box::new(PointLight::new(Point3f::new(0.5, 0.5, 0.0), Spectrum::new(0.0, 0.0, 0.5))),
+//        Box::new(PointLight::new(Point3f::new(0.2, 0.2, 0.0), Spectrum::new(0.7, 0.7, 0.7))),
 //        Box::new(PointLight::new(Point3f::new(1.5, -0.0, 4.0), Spectrum::white())),
 //        Box::new(PointLight::new(Point3f::new(-1.5, -0.0, -4.0), Spectrum::white())),
 //        Box::new(PointLight::new(Point3f::new(-1.5, -0.5, 4.0), Spectrum::white())),
