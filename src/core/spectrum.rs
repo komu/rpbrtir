@@ -34,9 +34,9 @@ impl Spectrum {
     }
 
     pub fn to_rgb(&self) -> Rgb<u8> {
-        let ir = (255.99 * clamp(self.r, 0.0, 1.0)) as u8;
-        let ig = (255.99 * clamp(self.g, 0.0, 1.0)) as u8;
-        let ib = (255.99 * clamp(self.b, 0.0, 1.0)) as u8;
+        let ir = (255.99 * clamp(self.r, 0.0, 1.0).sqrt()) as u8;
+        let ig = (255.99 * clamp(self.g, 0.0, 1.0).sqrt()) as u8;
+        let ib = (255.99 * clamp(self.b, 0.0, 1.0).sqrt()) as u8;
 
         Rgb([ir, ig, ib])
     }
