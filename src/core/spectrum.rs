@@ -1,4 +1,4 @@
-use core::types::Float;
+use core::types::{Float, INFINITY};
 use std::ops::AddAssign;
 use std::ops::Mul;
 use std::ops::Div;
@@ -34,11 +34,24 @@ impl Spectrum {
     }
 
     pub fn to_rgb(&self) -> Rgb<u8> {
-        let ir = (255.99 * clamp(self.r, 0.0, 1.0).sqrt()) as u8;
-        let ig = (255.99 * clamp(self.g, 0.0, 1.0).sqrt()) as u8;
-        let ib = (255.99 * clamp(self.b, 0.0, 1.0).sqrt()) as u8;
+        let s = self.clamp(0.0, 1.0);
+        let ir = (255.99 * s.r.sqrt()) as u8;
+        let ig = (255.99 * s.g.sqrt()) as u8;
+        let ib = (255.99 * s.b.sqrt()) as u8;
 
         Rgb([ir, ig, ib])
+    }
+
+    pub fn clamp_positive(&self) -> Spectrum {
+        self.clamp(0.0, INFINITY)
+    }
+
+    pub fn clamp(&self, low: Float, high: Float) -> Spectrum {
+        Spectrum {
+            r: clamp(self.r, low, high),
+            g: clamp(self.g, low, high),
+            b: clamp(self.b, low, high)
+        }
     }
 }
 

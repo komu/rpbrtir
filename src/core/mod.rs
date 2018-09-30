@@ -16,5 +16,6 @@ pub mod sampler;
 pub mod scene;
 pub mod shape;
 pub mod spectrum;
+pub mod texture;
 pub mod transform;
 pub mod types;

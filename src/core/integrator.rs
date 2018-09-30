@@ -58,7 +58,7 @@ pub fn specular_reflect(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect
                         let shading_diff = bsdf.dg_shading.differentials.borrow();
                         let shading_dg = shading_diff.as_ref().unwrap();
 
-// Compute differential reflected directions
+                        // Compute differential reflected directions
                         let dndx = bsdf.dg_shading.dndu.v * shading_dg.dudx + bsdf.dg_shading.dndv.v * shading_dg.dvdx;
                         let dndy = bsdf.dg_shading.dndu.v * shading_dg.dudy + bsdf.dg_shading.dndv.v * shading_dg.dvdy;
                         let dwodx = -r.rx_direction - wo;
@@ -107,12 +107,12 @@ pub fn specular_transmit(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isec
                         let shading_diff = bsdf.dg_shading.differentials.borrow();
                         let shading_dg = shading_diff.as_ref().unwrap();
 
-
                         let dndx = bsdf.dg_shading.dndu.v * shading_dg.dudx + bsdf.dg_shading.dndv.v * shading_dg.dvdx;
                         let dndy = bsdf.dg_shading.dndu.v * shading_dg.dudy + bsdf.dg_shading.dndv.v * shading_dg.dvdy;
 
-                        let dwodx = -rd1.differentials.as_ref().unwrap().rx_direction - wo;
-                        let dwody = -rd1.differentials.as_ref().unwrap().ry_direction - wo;
+                        let diffs = rd1.differentials.as_ref().unwrap();
+                        let dwodx = -diffs.rx_direction - wo;
+                        let dwody = -diffs.ry_direction - wo;
                         let dDNdx = dwodx.dot(n.v) + wo.dot(dndx);
                         let dDNdy = dwody.dot(n.v) + wo.dot(dndy);
 

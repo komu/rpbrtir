@@ -9,13 +9,14 @@ pub mod core;
 pub mod films;
 pub mod integrators;
 pub mod lights;
+pub mod materials;
 pub mod renderers;
 pub mod shapes;
+pub mod textures;
 
 use core::{
     scene::Scene,
     geometry::Point3f,
-    material::DummyMaterial,
     types::Float,
     primitive::GeometricPrimitive,
     film::Film,
@@ -35,6 +36,10 @@ use rand::random;
 use core::geometry::Ray;
 use core::shape::Shape;
 use core::transform::translate;
+use core::material::Material;
+use materials::matte::MatteMaterial;
+use std::sync::Arc;
+use textures::constant::ConstantTexture;
 
 fn main() {
     let scene = build_scene();
@@ -52,7 +57,7 @@ fn main() {
     };
 
     {
-        let mut cam = PerspectiveCamera::new(&cam_to_world, screen, 0.0, 1.0, 0.0, 1e30, 90.0, &mut film);
+        let mut cam = PerspectiveCamera::new(&cam_to_world, screen, 0.0, 1.0, 0.0, 1e30, 60.0, &mut film);
 
         let mut renderer = SamplerRenderer::new(&mut cam);
         renderer.render(&scene);
@@ -74,12 +79,12 @@ fn color(r: &Ray) -> Spectrum {
 
 fn build_scene() -> Scene {
     let mut primitives: Vec<Box<Primitive>> = vec!(
-        Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, 0.0, -1.0), 0.5)), Box::new(DummyMaterial::new()))),
-//        Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(1.0, 0.0, -1.0), 0.2)), Box::new(DummyMaterial::new())))
+        Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, 0.0, -1.0), 0.5)), dummy_material())),
+//        Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(1.0, 0.0, -1.0), 0.2)), dummy_material()))
     );
 
     for _ in 0..10 {
-        primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-1.0 + 2.0 * random::<Float>(), 0.0, -1.0 + 2.0 * random::<Float>()), 0.2)), Box::new(DummyMaterial::new()))));
+        primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-1.0 + 2.0 * random::<Float>(), 0.0, -1.0 + 2.0 * random::<Float>()), 0.2)), dummy_material())));
     }
 
     let lights: Vec<Box<Light>> = vec![
@@ -92,6 +97,14 @@ fn build_scene() -> Scene {
     ];
 
     Scene::new(Box::new(CompoundPrimitive::new(primitives)), lights)
+}
+
+fn dummy_material() -> Box<Material> {
+    Box::new(MatteMaterial::new(
+        Arc::new(ConstantTexture::new(Spectrum::white())),
+        Arc::new(ConstantTexture::new(0.0)),
+        None
+    ))
 }
 
 fn build_sphere(center: Point3f, radius: Float) -> Sphere {
