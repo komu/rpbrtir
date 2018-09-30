@@ -32,6 +32,6 @@ impl<'a> Intersection<'a> {
     }
 
     pub fn le(&self, _wo: Vector3f) -> Spectrum {
-        Spectrum::black() // TODO
+        Spectrum::black() // TODO: area lights
     }
 }

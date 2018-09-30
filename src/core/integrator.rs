@@ -1,12 +1,13 @@
 use core::{
     scene::Scene,
     renderer::Renderer,
-    geometry::RayDifferential,
+    geometry::{Ray, RayDifferential, RayDifferentials},
     intersection::Intersection,
     spectrum::Spectrum,
     sampler::Sample,
     reflection::{BSDF, BxDFType, BSDFSample},
     rng::RNG,
+    types::Float
 };
 use cgmath::prelude::*;
 
@@ -23,6 +24,23 @@ pub trait SurfaceIntegrator: Integrator {
         rng: &mut RNG) -> Spectrum;
 }
 
+pub trait VolumeIntegrator {
+    fn transmittance(&self, scene: &Scene, renderer: &Renderer, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> Float;
+    fn li(&self, scene: &Scene, rendere: &Renderer, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> (Spectrum, Spectrum);
+}
+
+pub struct NoOpVolumeIntegrator {}
+
+impl VolumeIntegrator for NoOpVolumeIntegrator {
+    fn transmittance(&self, scene: &Scene, renderer: &Renderer, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> Float {
+        1.0
+    }
+
+    fn li(&self, scene: &Scene, rendere: &Renderer, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> (Spectrum, Spectrum) {
+        (Spectrum::black(), Spectrum::white())
+    }
+}
+
 pub fn specular_reflect(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect: &Intersection, renderer: &Renderer, scene: &Scene, sample: Option<&Sample>) -> Spectrum {
     let ray = &rd1.ray;
     let wo = -ray.d;
@@ -31,79 +49,92 @@ pub fn specular_reflect(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect
 
     if let Some((f, wi, pdf, _)) = bsdf.sample_f(&wo, BSDFSample::new(rng), BxDFType::BSDF_REFLECTION | BxDFType::BSDF_SPECULAR) {
         if pdf > 0.0 && !f.is_black() && wi.dot(n.v).abs() != 0.0 {
-            // TODO: Compute ray differential _rd_ for specular reflection
-            let mut rd = RayDifferential::new_with_parent(p, wi, ray, isect.ray_epsilon);
-            /*
-            RayDifferential rd(p, wi, ray, isect.rayEpsilon);
-            if (ray.hasDifferentials) {
-                rd.hasDifferentials = true;
-                rd.rxOrigin = p + isect.dg.dpdx;
-                rd.ryOrigin = p + isect.dg.dpdy;
-                // Compute differential reflected directions
-                Normal dndx = bsdf->dgShading.dndu * bsdf->dgShading.dudx +
-                              bsdf->dgShading.dndv * bsdf->dgShading.dvdx;
-                Normal dndy = bsdf->dgShading.dndu * bsdf->dgShading.dudy +
-                              bsdf->dgShading.dndv * bsdf->dgShading.dvdy;
-                Vector dwodx = -ray.rxDirection - wo, dwody = -ray.ryDirection - wo;
-                float dDNdx = Dot(dwodx, n) + Dot(wo, dndx);
-                float dDNdy = Dot(dwody, n) + Dot(wo, dndy);
-                rd.rxDirection = wi - dwodx + 2 * Vector(Dot(wo, n) * dndx +
-                                                         dDNdx * n);
-                rd.ryDirection = wi - dwody + 2 * Vector(Dot(wo, n) * dndy +
-                                                         dDNdy * n);
-            }
-            */
+            let mut rd = RayDifferential {
+                ray: Ray::new_with_parent(p, wi, ray, isect.ray_epsilon),
+                differentials: match &rd1.differentials {
+                    Some(r) => {
+                        let isect_diff = isect.dg.differentials.borrow();
+                        let isect_dg = isect_diff.as_ref().unwrap();
+                        let shading_diff = bsdf.dg_shading.differentials.borrow();
+                        let shading_dg = shading_diff.as_ref().unwrap();
+
+// Compute differential reflected directions
+                        let dndx = bsdf.dg_shading.dndu.v * shading_dg.dudx + bsdf.dg_shading.dndv.v * shading_dg.dvdx;
+                        let dndy = bsdf.dg_shading.dndu.v * shading_dg.dudy + bsdf.dg_shading.dndv.v * shading_dg.dvdy;
+                        let dwodx = -r.rx_direction - wo;
+                        let dwody = -r.ry_direction - wo;
+                        let dDNdx = dwodx.dot(n.v) + wo.dot(dndx);
+                        let dDNdy = dwody.dot(n.v) + wo.dot(dndy);
+
+                        Some(RayDifferentials {
+                            rx_origin: p + isect_dg.dpdx,
+                            ry_origin: p + isect_dg.dpdy,
+                            rx_direction: wi - dwodx + 2.0 * (wo.dot(n.v) * dndx + dDNdx * n.v),
+                            ry_direction: wi - dwody + 2.0 * (wo.dot(n.v) * dndy + dDNdy * n.v),
+                        })
+                    }
+                    None => None
+                },
+            };
 
             let li = renderer.li(scene, &mut rd, sample, rng);
-            return f * li * wi.dot(n.v).abs() / pdf
+            return f * li * wi.dot(n.v).abs() / pdf;
         }
     }
 
     Spectrum::black()
 }
 
-pub fn specular_transmit(ray: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect: &Intersection, renderer: &Renderer, scene: &Scene, sample: Option<&Sample>) -> Spectrum {
-    Spectrum::black() // TODO
+pub fn specular_transmit(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect: &Intersection, renderer: &Renderer, scene: &Scene, sample: Option<&Sample>) -> Spectrum {
+    let ray = &rd1.ray;
+    let wo = -ray.d;
+    let p = bsdf.dg_shading.p;
+    let n = &bsdf.dg_shading.nn;
 
-    /*
-        Vector wo = -ray.d, wi;
-    float pdf;
-    const Point &p = bsdf->dgShading.p;
-    const Normal &n = bsdf->dgShading.nn;
-    Spectrum f = bsdf->Sample_f(wo, &wi, BSDFSample(rng), &pdf,
-                               BxDFType(BSDF_TRANSMISSION | BSDF_SPECULAR));
-    Spectrum L = 0.f;
-    if (pdf > 0.f && !f.IsBlack() && AbsDot(wi, n) != 0.f) {
-        // Compute ray differential _rd_ for specular transmission
-        RayDifferential rd(p, wi, ray, isect.rayEpsilon);
-        if (ray.hasDifferentials) {
-            rd.hasDifferentials = true;
-            rd.rxOrigin = p + isect.dg.dpdx;
-            rd.ryOrigin = p + isect.dg.dpdy;
+    if let Some((f, wi, pdf, _)) = bsdf.sample_f(&wo, BSDFSample::new(rng), BxDFType::BSDF_TRANSMISSION | BxDFType::BSDF_SPECULAR) {
+        if pdf > 0.0 && !f.is_black() && wi.dot(n.v).abs() != 0.0 {
+            // Compute ray differential _rd_ for specular transmission
+            let mut rd = RayDifferential {
+                ray: Ray::new_with_parent(p, wi, ray, isect.ray_epsilon),
+                differentials: match &rd1.differentials {
+                    Some(r) => {
+                        let w = -wo;
+                        let eta = if wo.dot(n.v) < 0.0 { 1.0 / bsdf.eta } else { bsdf.eta };
+                        let mut eta = bsdf.eta;
 
-            float eta = bsdf->eta;
-            Vector w = -wo;
-            if (Dot(wo, n) < 0) eta = 1.f / eta;
+                        let isect_diff = isect.dg.differentials.borrow();
+                        let isect_dg = isect_diff.as_ref().unwrap();
+                        let shading_diff = bsdf.dg_shading.differentials.borrow();
+                        let shading_dg = shading_diff.as_ref().unwrap();
 
-            Normal dndx = bsdf->dgShading.dndu * bsdf->dgShading.dudx + bsdf->dgShading.dndv * bsdf->dgShading.dvdx;
-            Normal dndy = bsdf->dgShading.dndu * bsdf->dgShading.dudy + bsdf->dgShading.dndv * bsdf->dgShading.dvdy;
 
-            Vector dwodx = -ray.rxDirection - wo, dwody = -ray.ryDirection - wo;
-            float dDNdx = Dot(dwodx, n) + Dot(wo, dndx);
-            float dDNdy = Dot(dwody, n) + Dot(wo, dndy);
+                        let dndx = bsdf.dg_shading.dndu.v * shading_dg.dudx + bsdf.dg_shading.dndv.v * shading_dg.dvdx;
+                        let dndy = bsdf.dg_shading.dndu.v * shading_dg.dudy + bsdf.dg_shading.dndv.v * shading_dg.dvdy;
 
-            float mu = eta * Dot(w, n) - Dot(wi, n);
-            float dmudx = (eta - (eta*eta*Dot(w,n))/Dot(wi, n)) * dDNdx;
-            float dmudy = (eta - (eta*eta*Dot(w,n))/Dot(wi, n)) * dDNdy;
+                        let dwodx = -rd1.differentials.as_ref().unwrap().rx_direction - wo;
+                        let dwody = -rd1.differentials.as_ref().unwrap().ry_direction - wo;
+                        let dDNdx = dwodx.dot(n.v) + wo.dot(dndx);
+                        let dDNdy = dwody.dot(n.v) + wo.dot(dndy);
 
-            rd.rxDirection = wi + eta * dwodx - Vector(mu * dndx + dmudx * n);
-            rd.ryDirection = wi + eta * dwody - Vector(mu * dndy + dmudy * n);
+                        let mu = eta * w.dot(n.v) - wi.dot(n.v);
+                        let dmudx = (eta - (eta * eta * w.dot(n.v)) / wi.dot(n.v)) * dDNdx;
+                        let dmudy = (eta - (eta * eta * w.dot(n.v)) / wi.dot(n.v)) * dDNdy;
+
+                        Some(RayDifferentials {
+                            rx_origin: p + isect_dg.dpdx,
+                            ry_origin: p + isect_dg.dpdy,
+                            rx_direction: wi + eta * dwodx - (mu * dndx + dmudx * n.v),
+                            ry_direction: wi + eta * dwody - (mu * dndy + dmudy * n.v),
+                        })
+                    }
+                    None => None
+                },
+            };
+
+            let li = renderer.li(scene, &mut rd, sample, rng);
+            return f * li * wi.dot(n.v).abs() / pdf;
         }
-        PBRT_STARTED_SPECULAR_REFRACTION_RAY(const_cast<RayDifferential *>(&rd));
-        Spectrum Li = renderer->Li(scene, rd, sample, rng, arena);
-        L = f * Li * AbsDot(wi, n) / pdf;
-        PBRT_FINISHED_SPECULAR_REFRACTION_RAY(const_cast<RayDifferential *>(&rd));
     }
-    return L;
-    */
+
+    Spectrum::black()
 }

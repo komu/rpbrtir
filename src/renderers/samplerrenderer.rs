@@ -6,13 +6,16 @@ use core::geometry::{Point3f, RayDifferential};
 use core::sampler::Sample;
 use core::rng::RNG;
 use core::spectrum::Spectrum;
-use core::types::{Float};
+use core::types::Float;
 use cgmath::vec3;
 use core::camera::Camera;
 use core::sampler::CameraSample;
+use core::integrator::VolumeIntegrator;
+use core::integrator::NoOpVolumeIntegrator;
 
 pub struct SamplerRenderer<'a> {
     integrator: Box<SurfaceIntegrator>,
+    volume_integrator: Box<VolumeIntegrator>,
     camera: &'a mut Camera
 }
 
@@ -20,6 +23,7 @@ impl <'a> SamplerRenderer<'a> {
     pub fn new(camera: &mut Camera) -> SamplerRenderer {
         SamplerRenderer {
             integrator: Box::new(WhittedIntegrator::new(50)),
+            volume_integrator: Box::new(NoOpVolumeIntegrator {}),
             camera
         }
     }
@@ -57,16 +61,18 @@ impl <'a> SamplerRenderer<'a> {
 
 impl <'a> Renderer for SamplerRenderer<'a> {
     fn li(&self, scene: &Scene, rd: &mut RayDifferential, sample: Option<&Sample>, rng: &mut RNG) -> Spectrum {
-        if let Some(mut isect) = scene.intersect(&mut rd.ray) {
+        let li = if let Some(mut isect) = scene.intersect(&mut rd.ray) {
             self.integrator.li(scene, self, rd, &mut isect, sample, rng)
         } else {
             scene.lights.iter().map(|l| { l.le(rd) }).sum()
-        }
+        };
 
-        // TODO: add contribution from volume integrator
+        let (lvi, t) = self.volume_integrator.li(scene, self, rd, sample, rng);
+
+        t * li + lvi
     }
 
-    fn transmittance(&self, _scene: &Scene, _rd: &RayDifferential, _sample: Option<&Sample>, _rng: &RNG) -> Float {
-        1.0 // TODO
+    fn transmittance(&self, scene: &Scene, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> Float {
+        self.volume_integrator.transmittance(scene, self, ray, sample, rng)
     }
 }
