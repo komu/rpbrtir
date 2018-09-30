@@ -31,15 +31,19 @@ use films::image::ImageFilm;
 use core::primitive::CompoundPrimitive;
 use core::primitive::Primitive;
 use cameras::perspective::PerspectiveCamera;
-use core::transform::look_at;
+use core::transform::{Transform, look_at, translate};
 use rand::random;
 use core::geometry::Ray;
 use core::shape::Shape;
-use core::transform::translate;
 use core::material::Material;
 use materials::matte::MatteMaterial;
 use std::sync::Arc;
 use textures::constant::ConstantTexture;
+use textures::checkerboard::{Checkerboard2DTexture, AAMethod};
+use core::texture::UVMapping2D;
+use core::texture::IdentityMapping3D;
+use textures::checkerboard::Checkerboard3DTexture;
+use core::transform::scale;
 
 fn main() {
     let scene = build_scene();
@@ -100,8 +104,16 @@ fn build_scene() -> Scene {
 }
 
 fn dummy_material() -> Box<Material> {
+    let white = Arc::new(ConstantTexture::new(Spectrum::white()));
+    let blue = Arc::new(ConstantTexture::new(Spectrum::blue()));
+
+    let checker = Checkerboard2DTexture::new(
+        Box::new(UVMapping2D::new(10.0, 10.0, 0.0, 0.0)), white, blue, AAMethod::None);
+//    let checker = Checkerboard3DTexture::new(
+//        Box::new(IdentityMapping3D::new(scale(10.0, 10.0, 10.0))), white, blue);
+
     Box::new(MatteMaterial::new(
-        Arc::new(ConstantTexture::new(Spectrum::white())),
+        Arc::new(checker),
         Arc::new(ConstantTexture::new(0.0)),
         None
     ))

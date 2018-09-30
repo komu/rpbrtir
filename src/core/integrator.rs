@@ -53,10 +53,8 @@ pub fn specular_reflect(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect
                 ray: Ray::new_with_parent(p, wi, ray, isect.ray_epsilon),
                 differentials: match &rd1.differentials {
                     Some(r) => {
-                        let isect_diff = isect.dg.differentials.borrow();
-                        let isect_dg = isect_diff.as_ref().unwrap();
-                        let shading_diff = bsdf.dg_shading.differentials.borrow();
-                        let shading_dg = shading_diff.as_ref().unwrap();
+                        let isect_dg = isect.dg.differentials.borrow();
+                        let shading_dg = bsdf.dg_shading.differentials.borrow();
 
                         // Compute differential reflected directions
                         let dndx = bsdf.dg_shading.dndu.v * shading_dg.dudx + bsdf.dg_shading.dndv.v * shading_dg.dvdx;
@@ -102,10 +100,8 @@ pub fn specular_transmit(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isec
                         let eta = if wo.dot(n.v) < 0.0 { 1.0 / bsdf.eta } else { bsdf.eta };
                         let mut eta = bsdf.eta;
 
-                        let isect_diff = isect.dg.differentials.borrow();
-                        let isect_dg = isect_diff.as_ref().unwrap();
-                        let shading_diff = bsdf.dg_shading.differentials.borrow();
-                        let shading_dg = shading_diff.as_ref().unwrap();
+                        let isect_dg = isect.dg.differentials.borrow();
+                        let shading_dg = bsdf.dg_shading.differentials.borrow();
 
                         let dndx = bsdf.dg_shading.dndu.v * shading_dg.dudx + bsdf.dg_shading.dndv.v * shading_dg.dvdx;
                         let dndy = bsdf.dg_shading.dndu.v * shading_dg.dudy + bsdf.dg_shading.dndv.v * shading_dg.dvdy;

@@ -7,6 +7,7 @@ use cgmath::prelude::*;
 use core::geometry::RayDifferential;
 use std::cell::RefCell;
 use core::transform::solve_linear_system_2x2;
+use cgmath::vec3;
 
 #[derive(Clone, Debug)]
 pub struct DifferentialGeometry<'a> {
@@ -16,10 +17,10 @@ pub struct DifferentialGeometry<'a> {
     pub dpdv: Vector3f,
     pub dndu: Normal,
     pub dndv: Normal,
-    pub uu: Float,
-    pub vv: Float,
+    pub u: Float,
+    pub v: Float,
     pub sh: &'a Shape,
-    pub differentials: RefCell<Option<Differentials>>,
+    pub differentials: RefCell<Differentials>,
 }
 
 #[derive(Clone, Debug)]
@@ -32,14 +33,27 @@ pub struct Differentials {
     pub dvdy: Float,
 }
 
+impl Differentials {
+    fn empty() -> Differentials {
+        Differentials {
+            dpdx: vec3(0.0, 0.0, 0.0),
+            dpdy: vec3(0.0, 0.0, 0.0),
+            dudx: 0.0,
+            dvdx: 0.0,
+            dudy: 0.0,
+            dvdy: 0.0,
+        }
+    }
+}
+
 impl<'a> DifferentialGeometry<'a> {
     pub fn new(p: Point3f,
                dpdu: Vector3f,
                dpdv: Vector3f,
                dndu: Normal,
                dndv: Normal,
-               uu: Float,
-               vv: Float,
+               u: Float,
+               v: Float,
                sh: &'a Shape) -> DifferentialGeometry<'a> {
         DifferentialGeometry {
             p,
@@ -48,10 +62,10 @@ impl<'a> DifferentialGeometry<'a> {
             dpdv,
             dndu,
             dndv,
-            uu,
-            vv,
+            u,
+            v,
             sh,
-            differentials: RefCell::new(None),
+            differentials: RefCell::new(Differentials::empty()),
         }
     }
 
@@ -64,14 +78,14 @@ impl<'a> DifferentialGeometry<'a> {
             let rxv = diff.rx_origin.to_vec();
             let tx = -(self.nn.v.dot(rxv) + d) / self.nn.v.dot(diff.rx_direction);
             if tx.is_nan() {
-                self.differentials.replace(None);
+                self.differentials.replace(Differentials::empty());
                 return;
             }
             let px = diff.rx_origin + tx * diff.rx_direction;
             let ryv = diff.ry_origin.to_vec();
             let ty = -(self.nn.v.dot(ryv) + d) / self.nn.v.dot(diff.ry_direction);
             if ty.is_nan() {
-                self.differentials.replace(None);
+                self.differentials.replace(Differentials::empty());
                 return;
             }
             let py = diff.ry_origin + ty * diff.ry_direction;
@@ -97,16 +111,16 @@ impl<'a> DifferentialGeometry<'a> {
             let (dudx, dvdx) = solve_linear_system_2x2(&a, &bx).unwrap_or((0.0, 0.0));
             let (dudy, dvdy) = solve_linear_system_2x2(&a, &by).unwrap_or((0.0, 0.0));
 
-            self.differentials.replace(Some(Differentials {
+            self.differentials.replace(Differentials {
                 dpdx,
                 dpdy,
                 dudx,
                 dvdx,
                 dudy,
                 dvdy,
-            }));
+            });
         } else {
-            self.differentials.replace(None);
+            self.differentials.replace(Differentials::empty());
         }
     }
 }

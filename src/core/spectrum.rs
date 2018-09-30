@@ -28,6 +28,9 @@ impl Spectrum {
     pub fn green() -> Spectrum {
         Spectrum::new(0.0, 1.0, 0.0)
     }
+    pub fn blue() -> Spectrum {
+        Spectrum::new(0.0, 0.0, 1.0)
+    }
 
     pub fn is_black(&self) -> bool {
         self.r == 0.0 && self.g == 0.0 && self.b == 0.0

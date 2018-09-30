@@ -12,7 +12,7 @@ impl <T> ConstantTexture<T> {
 }
 
 impl <T : Copy> Texture<T> for ConstantTexture<T> {
-    fn evaluate(&self, dg: &DifferentialGeometry) -> T {
+    fn evaluate(&self, _dg: &DifferentialGeometry) -> T {
         self.value
     }
 }
