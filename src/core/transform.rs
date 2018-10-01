@@ -105,26 +105,26 @@ pub fn perspective(fov: Float, n: Float, f: Float) -> Transform {
 
 pub fn look_at(pos: &Point3f, look: &Point3f, up: &Vector3f) -> Transform {
     let dir = (look - pos).normalize();
+    println!("dir: {:?}", dir); // TODO
     if up.normalize().cross(dir).magnitude() == 0.0 {
         println!("'up' and 'look' vectors pointing at same direction");
         return Transform::identity();
     }
 
 //    let cam_to_world = Matrix4::look_at(*pos, *look, *up);
-
     let left = up.normalize().cross(dir).normalize();
     let new_up = dir.cross(left);
 
     let cam_to_world = Matrix4::new(
-        left.x, new_up.x, dir.x, pos.x,
-        left.y, new_up.y, dir.y, pos.y,
-        left.z, new_up.z, dir.z, pos.z,
-        0.0, 0.0, 0.0, 1.0,
-    ).transpose();
+        left.x, left.y, left.z, 0.0,
+        new_up.x, new_up.y, new_up.z, 0.0,
+        dir.x, dir.y, dir.z, 0.0,
+        pos.x, pos.y, pos.z, 1.0
+    );
 
     Transform {
-        m: cam_to_world.invert().unwrap(),
-        m_inv: cam_to_world,
+        m: cam_to_world,
+        m_inv: cam_to_world.invert().unwrap(),
     }
 }
 
@@ -137,7 +137,8 @@ pub fn solve_linear_system_2x2(a: &[[Float; 2]; 2], b: &[Float; 2]) -> Option<(F
     let x0 = (a[1][1] * b[0] - a[0][1] * b[1]) / det;
     let x1 = (a[0][0] * b[1] - a[1][0] * b[0]) / det;
     if x0.is_nan() || x1.is_nan() {
-        return None;
+        None
+    } else {
+        Some((x0, x1))
     }
-    return Some((x0, x1));
 }

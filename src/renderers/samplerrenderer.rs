@@ -30,17 +30,10 @@ impl <'a> SamplerRenderer<'a> {
 
     pub fn render(&mut self, scene: &Scene) {
         let (nx, ny) = self.camera.get_film().resolution();
-        let lower_left_corner = Point3f::new(-2.0, -1.0, -1.0);
-        let horizontal = vec3(4.0, 0.0, 0.0);
-        let vertical = vec3(0.0, 2.0, 0.0);
-        let origin = Point3f::new(0.0, 0.0, 0.0);
         let mut rng = RNG::new();
 
         for y in 0..ny {
             for x in 0..nx {
-                let i = x;
-                let j = ny - y;
-
                 let sample = CameraSample {
                     image_x: x as Float,
                     image_y: y as Float,
