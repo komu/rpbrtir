@@ -19,24 +19,23 @@ use std::sync::Arc;
 use cgmath::{vec3, prelude::*};
 use core::{
     scene::Scene,
-    geometry::{Ray, Point3f},
+    geometry::Point3f,
     types::Float,
     primitive::{GeometricPrimitive, CompoundPrimitive, Primitive},
     film::Film,
     spectrum::Spectrum,
     light::Light,
-    transform::{Transform, look_at, translate, scale},
-    shape::Shape,
+    transform::{look_at, translate},
     material::Material,
-    texture::{UVMapping2D, IdentityMapping3D},
+    texture::UVMapping2D,
 };
 use shapes::Sphere;
 use lights::PointLight;
 use renderers::SamplerRenderer;
 use films::ImageFilm;
 use cameras::PerspectiveCamera;
-use materials::MatteMaterial;
-use textures::{ConstantTexture, Checkerboard2DTexture, Checkerboard3DTexture, AAMethod};
+use materials::{MatteMaterial, MetalMaterial};
+use textures::{ConstantTexture, Checkerboard2DTexture, AAMethod};
 
 fn main() {
     let scene = build_scene();
@@ -71,45 +70,34 @@ fn main() {
 fn build_scene() -> Scene {
     let mut primitives: Vec<Box<Primitive>> = Vec::new();
 
-    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, -1000.0, 0.0), 1000.0)), dummy_material(5000.0))));
-    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, 1.0, 0.0), 1.0)), dummy_material(10.0))));
-    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-4.0, 1.0, 0.0), 1.0)), dummy_material(10.0))));
-    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(4.0, 1.0, 0.0), 1.0)), dummy_material(10.0))));
+    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, -1000.0, 0.0), 1000.0)), checker_matte(5000.0))));
+    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, 1.0, 0.0), 1.0)), checker_matte(10.0))));
+    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-4.0, 1.0, 0.0), 1.0)), checker_matte(10.0))));
+    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(4.0, 1.0, 0.0), 1.0)), metal())));
 
     for _ in 0..20 {
-        primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-4.0 + 8.0 * random::<Float>(), 0.5, -4.0 + 8.0 * random::<Float>()), 0.5)), dummy_material(10.0))));
+        let material = if random::<Float>() < 0.4 { metal() } else { checker_matte(10.0) };
+        primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-4.0 + 8.0 * random::<Float>(), 0.5, -4.0 + 8.0 * random::<Float>()), 0.5)), material)));
     }
 
     let lights: Vec<Box<Light>> = vec![
         Box::new(PointLight::new(Point3f::new(0.0, 5.0, 0.0), 15.0 * Spectrum::new(1.0, 1.0, 1.0))),
         Box::new(PointLight::new(Point3f::new(-10.0, 5.0, 0.0), 15.0 * Spectrum::new(1.0, 1.0, 1.0))),
         Box::new(PointLight::new(Point3f::new(10.0, 5.0, 0.0), 15.0 * Spectrum::new(1.0, 1.0, 1.0))),
-//        Box::new(PointLight::new(Point3f::new(0.0, 3.0, 0.0), Spectrum::new(0.0, 0.8, 0.0))),
-//        Box::new(PointLight::new(Point3f::new(4.0, 3.0, 0.0), Spectrum::new(0.0, 0.8, 0.0))),
-//        Box::new(PointLight::new(Point3f::new(14.0, 3.0, 0.0), Spectrum::new(0.0, 0.8, 0.0))),
-//        Box::new(PointLight::new(Point3f::new(14.0, 3.0, 3.0), Spectrum::new(0.0, 0.8, 0.0))),
-//        Box::new(PointLight::new(Point3f::new(14.0, 3.0, 7.0), Spectrum::new(0.0, 0.8, 1.0))),
-//        Box::new(PointLight::new(Point3f::new(14.0, 4.0, 3.0), Spectrum::new(0.0, 0.8, 1.0))),
-//        Box::new(PointLight::new(Point3f::new(-4.0, 3.0, 0.0), Spectrum::new(0.0, 0.8, 0.0))),
-//        Box::new(PointLight::new(Point3f::new(-4.0, 4.0, 4.0), Spectrum::new(0.0, 0.8, 0.0))),
-//        Box::new(PointLight::new(Point3f::new(-4.0, 4.0, -4.0), Spectrum::new(0.0, 0.8, 0.0))),
-//        Box::new(PointLight::new(Point3f::new(-14.0, 10.0, -14.0), Spectrum::new(0.0, 0.8, 0.0))),
-//        Box::new(PointLight::new(Point3f::new(-13.0, -2.0, -3.0), Spectrum::new(0.0, 0.0, 1.0))),
-//        Box::new(PointLight::new(Point3f::new(0.0, -2.0, 14.0), Spectrum::new(0.0, 0.0, 1.0))),
-//        Box::new(PointLight::new(Point3f::new(0.0, -2.0, -14.0), Spectrum::new(0.0, 0.0, 1.0))),
-//        Box::new(PointLight::new(Point3f::new(13.0, 2.0, 3.0), Spectrum::new(0.0, 0.0, 0.2))),
-//        Box::new(PointLight::new(Point3f::new(-13.0, -2.0, -3.0), Spectrum::new(0.0, 0.0, 0.2))),
-//        Box::new(PointLight::new(Point3f::new(0.5, 0.5, 0.0), Spectrum::new(0.0, 0.0, 0.5))),
-//        Box::new(PointLight::new(Point3f::new(0.2, 0.2, 0.0), Spectrum::new(0.7, 0.7, 0.7))),
-//        Box::new(PointLight::new(Point3f::new(1.5, -0.0, 4.0), Spectrum::white())),
-//        Box::new(PointLight::new(Point3f::new(-1.5, -0.0, -4.0), Spectrum::white())),
-//        Box::new(PointLight::new(Point3f::new(-1.5, -0.5, 4.0), Spectrum::white())),
+        Box::new(PointLight::new(Point3f::new(7.0, 3.0, 0.0), 15.0 * Spectrum::new(1.0, 1.0, 1.0))),
     ];
 
     Scene::new(Box::new(CompoundPrimitive::new(primitives)), lights)
 }
 
-fn dummy_material(scale: Float) -> Box<Material> {
+fn metal() -> Box<Material> {
+    let eta = Arc::new(ConstantTexture::new(Spectrum::new(0.4, 0.2, 0.4)));
+    let k = Arc::new(ConstantTexture::new(Spectrum::new(0.9, 0.4, 0.5)));
+    let roughness = Arc::new(ConstantTexture::new(0.05));
+    Box::new(MetalMaterial::new(eta, k, roughness, None))
+}
+
+fn checker_matte(scale: Float) -> Box<Material> {
     let white = Arc::new(ConstantTexture::new(Spectrum::white()));
     let blue = Arc::new(ConstantTexture::new(Spectrum::blue()));
 

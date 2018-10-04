@@ -26,21 +26,22 @@ pub trait SurfaceIntegrator: Integrator {
 
 pub trait VolumeIntegrator {
     fn transmittance(&self, scene: &Scene, renderer: &Renderer, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> Float;
-    fn li(&self, scene: &Scene, rendere: &Renderer, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> (Spectrum, Spectrum);
+    fn li(&self, scene: &Scene, renderer: &Renderer, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> (Spectrum, Spectrum);
 }
 
 pub struct NoOpVolumeIntegrator {}
 
 impl VolumeIntegrator for NoOpVolumeIntegrator {
-    fn transmittance(&self, scene: &Scene, renderer: &Renderer, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> Float {
+    fn transmittance(&self, _scene: &Scene, _renderer: &Renderer, _ray: &RayDifferential, _sample: Option<&Sample>, _rng: &RNG) -> Float {
         1.0
     }
 
-    fn li(&self, scene: &Scene, rendere: &Renderer, ray: &RayDifferential, sample: Option<&Sample>, rng: &RNG) -> (Spectrum, Spectrum) {
+    fn li(&self, _scene: &Scene, _renderer: &Renderer, _ray: &RayDifferential, _sample: Option<&Sample>, _rng: &RNG) -> (Spectrum, Spectrum) {
         (Spectrum::black(), Spectrum::white())
     }
 }
 
+#[allow(non_snake_case)]
 pub fn specular_reflect(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect: &Intersection, renderer: &Renderer, scene: &Scene, sample: Option<&Sample>) -> Spectrum {
     let ray = &rd1.ray;
     let wo = -ray.d;
@@ -83,6 +84,7 @@ pub fn specular_reflect(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect
     Spectrum::black()
 }
 
+#[allow(non_snake_case)]
 pub fn specular_transmit(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isect: &Intersection, renderer: &Renderer, scene: &Scene, sample: Option<&Sample>) -> Spectrum {
     let ray = &rd1.ray;
     let wo = -ray.d;
@@ -94,36 +96,35 @@ pub fn specular_transmit(rd1: &RayDifferential, bsdf: &BSDF, rng: &mut RNG, isec
             // Compute ray differential _rd_ for specular transmission
             let mut rd = RayDifferential {
                 ray: Ray::new_with_parent(p, wi, ray, isect.ray_epsilon),
-                differentials: match &rd1.differentials {
-                    Some(r) => {
-                        let w = -wo;
-                        let eta = if wo.dot(n.v) < 0.0 { 1.0 / bsdf.eta } else { bsdf.eta };
-                        let mut eta = bsdf.eta;
+                differentials: if rd1.differentials.is_some() {
+                    let w = -wo;
+                    let eta = if wo.dot(n.v) < 0.0 { 1.0 / bsdf.eta } else { bsdf.eta };
+                    let mut eta = bsdf.eta;
 
-                        let isect_dg = isect.dg.differentials.borrow();
-                        let shading_dg = bsdf.dg_shading.differentials.borrow();
+                    let isect_dg = isect.dg.differentials.borrow();
+                    let shading_dg = bsdf.dg_shading.differentials.borrow();
 
-                        let dndx = bsdf.dg_shading.dndu.v * shading_dg.dudx + bsdf.dg_shading.dndv.v * shading_dg.dvdx;
-                        let dndy = bsdf.dg_shading.dndu.v * shading_dg.dudy + bsdf.dg_shading.dndv.v * shading_dg.dvdy;
+                    let dndx = bsdf.dg_shading.dndu.v * shading_dg.dudx + bsdf.dg_shading.dndv.v * shading_dg.dvdx;
+                    let dndy = bsdf.dg_shading.dndu.v * shading_dg.dudy + bsdf.dg_shading.dndv.v * shading_dg.dvdy;
 
-                        let diffs = rd1.differentials.as_ref().unwrap();
-                        let dwodx = -diffs.rx_direction - wo;
-                        let dwody = -diffs.ry_direction - wo;
-                        let dDNdx = dwodx.dot(n.v) + wo.dot(dndx);
-                        let dDNdy = dwody.dot(n.v) + wo.dot(dndy);
+                    let diffs = rd1.differentials.as_ref().unwrap();
+                    let dwodx = -diffs.rx_direction - wo;
+                    let dwody = -diffs.ry_direction - wo;
+                    let dDNdx = dwodx.dot(n.v) + wo.dot(dndx);
+                    let dDNdy = dwody.dot(n.v) + wo.dot(dndy);
 
-                        let mu = eta * w.dot(n.v) - wi.dot(n.v);
-                        let dmudx = (eta - (eta * eta * w.dot(n.v)) / wi.dot(n.v)) * dDNdx;
-                        let dmudy = (eta - (eta * eta * w.dot(n.v)) / wi.dot(n.v)) * dDNdy;
+                    let mu = eta * w.dot(n.v) - wi.dot(n.v);
+                    let dmudx = (eta - (eta * eta * w.dot(n.v)) / wi.dot(n.v)) * dDNdx;
+                    let dmudy = (eta - (eta * eta * w.dot(n.v)) / wi.dot(n.v)) * dDNdy;
 
-                        Some(RayDifferentials {
-                            rx_origin: p + isect_dg.dpdx,
-                            ry_origin: p + isect_dg.dpdy,
-                            rx_direction: wi + eta * dwodx - (mu * dndx + dmudx * n.v),
-                            ry_direction: wi + eta * dwody - (mu * dndy + dmudy * n.v),
-                        })
-                    }
-                    None => None
+                    Some(RayDifferentials {
+                        rx_origin: p + isect_dg.dpdx,
+                        ry_origin: p + isect_dg.dpdy,
+                        rx_direction: wi + eta * dwodx - (mu * dndx + dmudx * n.v),
+                        ry_direction: wi + eta * dwody - (mu * dndy + dmudy * n.v),
+                    })
+                } else {
+                    None
                 },
             };
 

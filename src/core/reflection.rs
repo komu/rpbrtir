@@ -1,13 +1,13 @@
 use core::differential_geometry::DifferentialGeometry;
 use core::spectrum::Spectrum;
-use core::geometry::Vector3f;
-use core::geometry::Normal;
-use core::types::Float;
+use core::geometry::{Normal, Vector3f};
 use cgmath::{vec3, prelude::*};
-use core::types::INV_PI;
+use core::types::{Float, INV_PI, INV_TWO_PI};
 use core::rng::RNG;
 use core::montecarlo::cosine_sample_hemisphere;
 use core::math::floor_to_int;
+use core::types::PI;
+use core::geometry::spherical_direction;
 
 pub struct BSDF<'a> {
     pub dg_shading: &'a DifferentialGeometry<'a>,
@@ -71,7 +71,7 @@ impl<'a> BSDF<'a> {
         let matching_comps = self.num_components(flags);
 
         if matching_comps == 0 {
-            return None
+            return None;
         }
 
         let which = floor_to_int(bsdf_sample.u_component * matching_comps as Float).min(matching_comps as i32 - 1) as usize;
@@ -84,7 +84,7 @@ impl<'a> BSDF<'a> {
         let (mut f, mut pdf) = bxdf.sample_f(wo, &mut wi, bsdf_sample.u_dir[0], bsdf_sample.u_dir[1]);
 
         if pdf == 0.0 {
-            return None
+            return None;
         }
 
         let sampled_type = bxdf.bxdf_type();
@@ -120,7 +120,7 @@ impl<'a> BSDF<'a> {
             }
         }
 
-        return Some((f, wi_w, pdf, sampled_type))
+        return Some((f, wi_w, pdf, sampled_type));
     }
 
     fn num_components(&self, flags: BxDFType) -> usize {
@@ -173,7 +173,6 @@ impl Lambertian {
 }
 
 impl BxDF for Lambertian {
-
     fn f(&self, _wo: &Vector3f, _wi: &Vector3f) -> Spectrum {
         self.r * INV_PI
     }
@@ -207,6 +206,157 @@ impl BSDFSample {
         BSDFSample {
             u_component: rng.random_float(),
             u_dir: [rng.random_float(), rng.random_float()],
+        }
+    }
+}
+
+pub trait MicrofacetDistribution {
+    fn d(&self, wh: &Vector3f) -> Float;
+    fn sample_f(&self, wo: &Vector3f, u1: Float, u2: Float) -> (Vector3f, Float);
+    fn pdf(&self, wo: &Vector3f, wi: &Vector3f) -> Float;
+}
+
+pub struct Blinn {
+    exponent: Float
+}
+
+impl Blinn {
+    pub fn new(exponent: Float) -> Blinn {
+        Blinn { exponent }
+    }
+}
+
+impl MicrofacetDistribution for Blinn {
+    fn d(&self, wh: &Vector3f) -> Float {
+        let costhetah = abs_cos_theta(wh);
+        return (self.exponent + 2.0) * INV_TWO_PI * costhetah.powf(self.exponent);
+    }
+
+    fn sample_f(&self, wo: &Vector3f, u1: Float, u2: Float) -> (Vector3f, Float) {
+        // Compute sampled half-angle vector $\wh$ for Blinn distribution
+        let costheta = u1.powf(1.0 / (self.exponent + 1.0));
+        let sintheta = (1.0 - costheta * costheta).max(0.0).sqrt();
+        let phi = u2 * 2.0 * PI;
+        let mut wh = spherical_direction(sintheta, costheta, phi);
+        if !same_hemisphere(wo, &wh) {
+            wh = -wh;
+        }
+
+        // Compute incident direction by reflecting about $\wh$
+        let wi = -1.0 * wo + 2.0 * wo.dot(wh) * wh;
+
+        // Compute PDF for $\wi$ from Blinn distribution
+        let mut blinn_pdf = ((self.exponent + 1.0) * costheta.powf(self.exponent)) / (2.0 * PI * 4.0 * wo.dot(wh));
+        if wo.dot(wh) <= 0.0 {
+            blinn_pdf = 0.0;
+        }
+
+        (wi, blinn_pdf)
+    }
+
+    fn pdf(&self, wo: &Vector3f, wi: &Vector3f) -> Float {
+        let wh = (wo + wi).normalize();
+        let costheta = abs_cos_theta(&wh);
+        // Compute PDF for $\wi$ from Blinn distribution
+        let mut blinn_pdf = ((self.exponent + 1.0) * costheta.powf(self.exponent)) / (2.0 * PI * 4.0 * wo.dot(wh));
+        if wo.dot(wh) <= 0.0 {
+            blinn_pdf = 0.0;
+        }
+        return blinn_pdf;
+    }
+}
+
+pub trait Fresnel {
+    fn evaluate(&self, cosi: Float) -> Spectrum;
+}
+
+pub struct FresnelConductor {
+    eta: Spectrum,
+    k: Spectrum,
+}
+
+impl FresnelConductor {
+    pub fn new(eta: Spectrum, k: Spectrum) -> FresnelConductor {
+        FresnelConductor { eta, k }
+    }
+}
+
+impl Fresnel for FresnelConductor {
+    fn evaluate(&self, cosi: Float) -> Spectrum {
+        fr_cond(cosi.abs(), self.eta, &self.k)
+    }
+}
+
+fn fr_cond(cosi: Float, eta: Spectrum, k: &Spectrum) -> Spectrum {
+    let tmp = (eta * eta + *k * *k) * cosi * cosi;
+    let rparl2 = (tmp - (2.0 * eta * cosi) + Spectrum::white()) / (tmp + (2.0 * eta * cosi) + Spectrum::white());
+    let tmp_f = eta * eta + *k * *k;
+    let rperp2 =
+        (tmp_f - (2.0 * eta * cosi) + Spectrum::from(cosi * cosi)) /
+            (tmp_f + (2.0 * eta * cosi) + Spectrum::from(cosi * cosi));
+
+    (rparl2 + rperp2) / 2.0
+}
+
+pub struct Microfacet {
+    reflectance: Spectrum,
+    fresnel: Box<Fresnel>,
+    distribution: Box<MicrofacetDistribution>
+}
+
+impl Microfacet {
+    pub fn new(reflectance: Spectrum, fresnel: Box<Fresnel>, distribution: Box<MicrofacetDistribution>) -> Microfacet {
+        Microfacet { reflectance, fresnel, distribution }
+    }
+
+    fn g(&self, wo: &Vector3f, wi: &Vector3f, wh: &Vector3f) -> Float {
+        let n_dot_wh = abs_cos_theta(wh);
+        let n_dot_wo = abs_cos_theta(wo);
+        let n_dot_wi = abs_cos_theta(wi);
+        let wo_dot_wh = wo.dot(*wh).abs();
+
+        (2.0 * n_dot_wh * n_dot_wo / wo_dot_wh).min(2.0 * n_dot_wh * n_dot_wi / wo_dot_wh).min(1.0)
+    }
+}
+
+impl BxDF for Microfacet {
+
+    fn f(&self, wo: &Vector3f, wi: &Vector3f) -> Spectrum {
+        let cos_theta_o = abs_cos_theta(wo);
+        let cos_theta_i = abs_cos_theta(wi);
+        if cos_theta_i == 0.0 || cos_theta_o == 0.0 {
+            return Spectrum::black()
+        }
+
+        let mut wh: Vector3f = wi + wo;
+        if wh.x == 0. && wh.y == 0. && wh.z == 0. {
+            return Spectrum::black()
+        }
+
+        wh = wh.normalize();
+        let cos_theta_h = wi.dot(wh);
+        let f = self.fresnel.evaluate(cos_theta_h);
+        return self.reflectance * self.distribution.d(&wh) * self.g(wo, wi, &wh) * f / (4.0 * cos_theta_i * cos_theta_o);
+    }
+
+    fn sample_f(&self, wo: Vector3f, wi: &mut Vector3f, u1: Float, u2: Float) -> (Spectrum, Float) {
+        let (wi, pdf) = self.distribution.sample_f(&wo, u1, u2);
+        if same_hemisphere(&wo, &wi) {
+            (self.f(&wo, &wi), pdf)
+        } else {
+            (Spectrum::black(), pdf)
+        }
+    }
+
+    fn bxdf_type(&self) -> BxDFType {
+        BxDFType::BSDF_REFLECTION | BxDFType::BSDF_GLOSSY
+    }
+
+    fn pdf(&self, wo: &Vector3f, wi: &Vector3f) -> Float {
+        if same_hemisphere(wo, wi) {
+            self.distribution.pdf(wo, wi)
+        } else {
+            0.0
         }
     }
 }

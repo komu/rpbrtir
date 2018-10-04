@@ -6,6 +6,7 @@ use image::Rgb;
 use std::ops::Add;
 use std::iter::Sum;
 use core::math::clamp;
+use std::ops::Sub;
 
 #[derive(Clone, Copy)]
 pub struct Spectrum {
@@ -58,11 +59,25 @@ impl Spectrum {
     }
 }
 
+impl From<Float> for Spectrum {
+    fn from(v: Float) -> Spectrum {
+        Spectrum::new(v, v, v)
+    }
+}
+
 impl Add<Spectrum> for Spectrum {
     type Output = Spectrum;
 
     fn add(self, rhs: Spectrum) -> Spectrum {
         Spectrum::new(self.r + rhs.r, self.g + rhs.g, self.b + rhs.b)
+    }
+}
+
+impl Sub<Spectrum> for Spectrum {
+    type Output = Spectrum;
+
+    fn sub(self, rhs: Spectrum) -> Spectrum {
+        Spectrum::new(self.r - rhs.r, self.g - rhs.g, self.b - rhs.b)
     }
 }
 
@@ -122,6 +137,18 @@ impl Div<Float> for Spectrum {
     }
 }
 
+impl Div<Spectrum> for Spectrum {
+    type Output = Spectrum;
+
+    fn div(self, rhs: Spectrum) -> Spectrum {
+        Spectrum {
+            r: self.r / rhs.r,
+            g: self.g / rhs.g,
+            b: self.b / rhs.b,
+        }
+    }
+}
+
 impl Sum<Spectrum> for Spectrum {
     fn sum<I: Iterator<Item=Spectrum>>(iter: I) -> Spectrum {
         let mut sum = Spectrum::black();
@@ -131,4 +158,3 @@ impl Sum<Spectrum> for Spectrum {
         sum
     }
 }
-

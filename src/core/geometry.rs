@@ -36,14 +36,14 @@ impl Ray {
 
 pub struct RayDifferential {
     pub ray: Ray,
-    pub differentials: Option<RayDifferentials>
+    pub differentials: Option<RayDifferentials>,
 }
 
 pub struct RayDifferentials {
     pub rx_origin: Point3f,
     pub ry_origin: Point3f,
     pub rx_direction: Vector3f,
-    pub ry_direction: Vector3f
+    pub ry_direction: Vector3f,
 }
 
 impl RayDifferential {
@@ -200,4 +200,8 @@ impl BBox {
 
         return Some((min_t, max_t));
     }
+}
+
+pub fn spherical_direction(sintheta: Float, costheta: Float, phi: Float) -> Vector3f {
+    vec3(sintheta * phi.cos(), sintheta * phi.sin(), costheta)
 }

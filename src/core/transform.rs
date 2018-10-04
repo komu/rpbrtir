@@ -105,7 +105,6 @@ pub fn perspective(fov: Float, n: Float, f: Float) -> Transform {
 
 pub fn look_at(pos: &Point3f, look: &Point3f, up: &Vector3f) -> Transform {
     let dir = (look - pos).normalize();
-    println!("dir: {:?}", dir); // TODO
     if up.normalize().cross(dir).magnitude() == 0.0 {
         println!("'up' and 'look' vectors pointing at same direction");
         return Transform::identity();
