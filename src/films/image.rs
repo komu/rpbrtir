@@ -20,12 +20,10 @@ impl ImageFilm {
 }
 
 impl Film for ImageFilm {
-    fn put_pixel(&mut self, x: u32, y: u32, l: &Spectrum) {
-        self.img.put_pixel(x, y, l.to_rgb())
-    }
 
     fn add_sample(&mut self, sample: &CameraSample, l: &Spectrum) {
-        unimplemented!()
+        // TODO: support filters or at least averaging
+        self.img.put_pixel(sample.image_x as u32, sample.image_y as u32, l.to_rgb());
     }
 
     fn splat(&mut self, sample: &CameraSample, l: &Spectrum) {

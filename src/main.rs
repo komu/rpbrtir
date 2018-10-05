@@ -11,6 +11,7 @@ pub mod integrators;
 pub mod lights;
 pub mod materials;
 pub mod renderers;
+pub mod samplers;
 pub mod shapes;
 pub mod textures;
 

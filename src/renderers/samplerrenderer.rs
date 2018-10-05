@@ -3,14 +3,15 @@ use integrators::whitted::WhittedIntegrator;
 use core::renderer::Renderer;
 use core::scene::Scene;
 use core::geometry::RayDifferential;
-use core::sampler::Sample;
+use core::sampler::{Sample, Sampler};
 use core::rng::RNG;
 use core::spectrum::Spectrum;
 use core::types::Float;
 use core::camera::Camera;
-use core::sampler::CameraSample;
 use core::integrator::VolumeIntegrator;
 use core::integrator::NoOpVolumeIntegrator;
+use samplers::RandomSampler;
+use core::sampler::SamplerWindow;
 
 pub struct SamplerRenderer<'a> {
     integrator: Box<SurfaceIntegrator>,
@@ -31,22 +32,21 @@ impl <'a> SamplerRenderer<'a> {
         let (nx, ny) = self.camera.get_film().resolution();
         let mut rng = RNG::new();
 
-        for y in 0..ny {
-            for x in 0..nx {
-                let sample = CameraSample {
-                    image_x: x as Float,
-                    image_y: y as Float,
-                    lens_u: 0.0, // TODO
-                    lens_v: 0.0,
-                    time: 0.0
-                };
+        let win = SamplerWindow::from_dimensions(nx, ny);
+        let mut sampler = RandomSampler::new(win, 1, 0.0, 1.0);
 
-                let (mut r, _) = self.camera.generate_ray_differential(&sample);
-                let li = self.li(&scene, &mut r, None, &mut rng);
+        let mut sample = Sample::default();
 
-//                self.camera.get_film().add_sample(&sample, &li);
-                self.camera.get_film().put_pixel(x, y, &li);
+        loop {
+            let count = sampler.get_more_samples(&mut sample, &mut rng);
+            if count == 0 {
+                break
             }
+
+            let (mut r, _) = self.camera.generate_ray_differential(&sample.cam);
+            let li = self.li(&scene, &mut r, None, &mut rng);
+
+            self.camera.get_film().add_sample(&sample.cam, &li);
         }
     }
 }

@@ -4,9 +4,6 @@ use core::types::Float;
 
 pub trait Film {
 
-    // TODO: temporary
-    fn put_pixel(&mut self, x: u32, y: u32, l: &Spectrum);
-
     fn add_sample(&mut self, sample: &CameraSample, l: &Spectrum);
     fn splat(&mut self, sample: &CameraSample, l: &Spectrum);
 
