@@ -40,6 +40,7 @@ use cameras::PerspectiveCamera;
 use materials::{MatteMaterial, MetalMaterial};
 use textures::{ConstantTexture, Checkerboard2DTexture, AAMethod};
 use filters::BoxFilter;
+use filters::MitchellFilter;
 
 fn main() {
     let scene = build_scene();
@@ -53,7 +54,7 @@ fn main() {
 
     let cam_to_world = look_at(&eye, &center, &up);
 
-    let mut film = ImageFilm::new(String::from("images/output.png"), 800, 400, Box::new(BoxFilter::default()));
+    let mut film = ImageFilm::new(String::from("images/output.png"), 800, 400, Box::new(MitchellFilter::default()));
     let aspect_ratio = film.aspect_ratio();
     let screen = if aspect_ratio > 1.0 {
         [-aspect_ratio, aspect_ratio, -1.0, 1.0]
