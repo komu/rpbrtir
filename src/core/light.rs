@@ -9,6 +9,7 @@ use core::renderer::Renderer;
 use core::rng::RNG;
 use core::geometry::{Ray, RayDifferential};
 use core::geometry::distance;
+use core::geometry::Normal;
 
 pub trait Light {
     fn sample_l(
@@ -23,6 +24,10 @@ pub trait Light {
     fn le(&self, ray: &RayDifferential) -> Spectrum {
         Spectrum::black()
     }
+}
+
+pub trait AreaLight : Light {
+    fn l(&self, p: &Point3f, n: &Normal, w: &Vector3f) -> Spectrum;
 }
 
 pub struct LightSample {}

@@ -31,7 +31,10 @@ impl<'a> Intersection<'a> {
         self.primitive.get_bsdf(&self.dg, &self.object_to_world)
     }
 
-    pub fn le(&self, _wo: Vector3f) -> Spectrum {
-        Spectrum::black() // TODO: area lights
+    pub fn le(&self, w: Vector3f) -> Spectrum {
+        match self.primitive.get_area_light() {
+            Some(area) => area.l(&self.dg.p, &self.dg.nn, &w),
+            None => Spectrum::black()
+        }
     }
 }

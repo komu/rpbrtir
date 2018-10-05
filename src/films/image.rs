@@ -142,7 +142,7 @@ impl Film for ImageFilm {
     }
 
     fn write_image_with_scale(&self, splat_scale: Float) {
-        let mut buf = ImageBuffer::from_fn(self.x_pixel_count as u32, self.y_pixel_count as u32, |x, y| {
+        let buf = ImageBuffer::from_fn(self.x_pixel_count as u32, self.y_pixel_count as u32, |x, y| {
             let index = (y * self.x_pixel_count as u32 + x) as usize;
             self.img[index].to_rgb()
         });

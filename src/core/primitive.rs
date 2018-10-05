@@ -7,23 +7,27 @@ use core::{
     reflection::BSDF,
 };
 use core::transform::Transform;
+use core::light::AreaLight;
 
 pub trait Primitive {
     fn intersect(&self, ray: &mut Ray) -> Option<Intersection>;
     fn intersect_p(&self, ray: &Ray) -> bool;
     fn get_bsdf<'a, 'b>(&'a self, dg: &'a DifferentialGeometry<'a>, object_to_world: &'b Transform) -> BSDF<'a>;
+    fn get_area_light(&self) -> Option<&AreaLight>;
 }
 
 pub struct GeometricPrimitive {
     shape: Box<Shape>,
     material: Box<Material>,
+    area_light: Option<Box<AreaLight>>
 }
 
 impl GeometricPrimitive {
-    pub fn new(shape: Box<Shape>, material: Box<Material>) -> GeometricPrimitive {
+    pub fn new(shape: Box<Shape>, material: Box<Material>, area_light: Option<Box<AreaLight>>) -> GeometricPrimitive {
         GeometricPrimitive {
             shape,
             material,
+            area_light
         }
     }
 }
@@ -50,6 +54,13 @@ impl Primitive for GeometricPrimitive {
     fn get_bsdf<'a, 'b>(&'a self, dg: &'a DifferentialGeometry<'a>, object_to_world: &'b Transform) -> BSDF<'a> {
         let dgs = self.shape.get_shading_geometry(object_to_world, dg);
         self.material.get_bsdf(dg, dgs)
+    }
+
+    fn get_area_light(&self) -> Option<&AreaLight> {
+        match self.area_light {
+            Some(ref l) => Some(l.as_ref()),
+            None => None
+        }
     }
 }
 
@@ -84,5 +95,9 @@ impl Primitive for CompoundPrimitive {
 
     fn get_bsdf<'a, 'b>(&'a self, dg: &'a DifferentialGeometry<'a>, object_to_world: &'b Transform) -> BSDF<'a> {
         panic!("get_bsdf should not be called for Aggregate")
+    }
+
+    fn get_area_light(&self) -> Option<&AreaLight> {
+        panic!("get_area_light should not be called for Aggregate")
     }
 }

@@ -107,7 +107,7 @@ fn checker_matte(scale: Float) -> Box<Material> {
 }
 
 fn geometric_primitive(shape: Box<Shape>, material: Box<Material>) -> Box<Primitive> {
-    Box::new(GeometricPrimitive::new(shape, material))
+    Box::new(GeometricPrimitive::new(shape, material, None))
 }
 
 fn point_light_white(point: Point3f, intensity: Float) -> Box<Light> {
