@@ -33,7 +33,7 @@ impl <'a> SamplerRenderer<'a> {
         let mut rng = RNG::new();
 
         let win = SamplerWindow::from_dimensions(nx, ny);
-        let mut sampler = RandomSampler::new(win, 1, 0.0, 1.0);
+        let mut sampler = RandomSampler::new(win, 4, 0.0, 1.0);
 
         let mut sample = Sample::default();
 

@@ -10,9 +10,9 @@ use std::ops::Sub;
 
 #[derive(Clone, Copy)]
 pub struct Spectrum {
-    r: Float,
-    g: Float,
-    b: Float,
+    pub r: Float,
+    pub g: Float,
+    pub b: Float,
 }
 
 impl Spectrum {
@@ -35,15 +35,6 @@ impl Spectrum {
 
     pub fn is_black(&self) -> bool {
         self.r == 0.0 && self.g == 0.0 && self.b == 0.0
-    }
-
-    pub fn to_rgb(&self) -> Rgb<u8> {
-        let s = self.clamp(0.0, 1.0);
-        let ir = (255.99 * s.r.sqrt()) as u8;
-        let ig = (255.99 * s.g.sqrt()) as u8;
-        let ib = (255.99 * s.b.sqrt()) as u8;
-
-        Rgb([ir, ig, ib])
     }
 
     pub fn clamp_positive(&self) -> Spectrum {
