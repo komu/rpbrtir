@@ -1,6 +1,7 @@
 pub mod differential_geometry;
 pub mod camera;
 pub mod film;
+pub mod filter;
 pub mod geometry;
 pub mod integrator;
 pub mod intersection;

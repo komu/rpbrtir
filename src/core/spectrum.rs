@@ -2,7 +2,6 @@ use core::types::{Float, INFINITY};
 use std::ops::AddAssign;
 use std::ops::Mul;
 use std::ops::Div;
-use image::Rgb;
 use std::ops::Add;
 use std::iter::Sum;
 use core::math::clamp;

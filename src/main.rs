@@ -3,10 +3,12 @@ extern crate image;
 extern crate rand;
 #[macro_use]
 extern crate bitflags;
+extern crate array_init;
 
 pub mod cameras;
 pub mod core;
 pub mod films;
+pub mod filters;
 pub mod integrators;
 pub mod lights;
 pub mod materials;
@@ -37,6 +39,7 @@ use films::ImageFilm;
 use cameras::PerspectiveCamera;
 use materials::{MatteMaterial, MetalMaterial};
 use textures::{ConstantTexture, Checkerboard2DTexture, AAMethod};
+use filters::BoxFilter;
 
 fn main() {
     let scene = build_scene();
@@ -50,7 +53,7 @@ fn main() {
 
     let cam_to_world = look_at(&eye, &center, &up);
 
-    let mut film = ImageFilm::new(String::from("images/output.png"), 800, 400);
+    let mut film = ImageFilm::new(String::from("images/output.png"), 800, 400, Box::new(BoxFilter::default()));
     let aspect_ratio = film.aspect_ratio();
     let screen = if aspect_ratio > 1.0 {
         [-aspect_ratio, aspect_ratio, -1.0, 1.0]
