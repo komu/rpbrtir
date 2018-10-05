@@ -1,5 +1,5 @@
 use core::integrator::SurfaceIntegrator;
-use integrators::whitted::WhittedIntegrator;
+use integrators::WhittedIntegrator;
 use core::renderer::Renderer;
 use core::scene::Scene;
 use core::geometry::RayDifferential;

@@ -1,3 +1,3 @@
-pub mod samplerrenderer;
+mod samplerrenderer;
 
 pub use self::samplerrenderer::SamplerRenderer;

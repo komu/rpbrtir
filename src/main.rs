@@ -1,46 +1,33 @@
+extern crate rpbtrir;
 extern crate cgmath;
-extern crate image;
 extern crate rand;
-#[macro_use]
-extern crate bitflags;
-extern crate array_init;
-
-pub mod cameras;
-pub mod core;
-pub mod films;
-pub mod filters;
-pub mod integrators;
-pub mod lights;
-pub mod materials;
-pub mod renderers;
-pub mod samplers;
-pub mod shapes;
-pub mod textures;
 
 use rand::random;
 use std::sync::Arc;
 use cgmath::{vec3, prelude::*};
-use core::{
-    scene::Scene,
-    geometry::Point3f,
-    types::Float,
-    primitive::{GeometricPrimitive, CompoundPrimitive, Primitive},
-    film::Film,
-    spectrum::Spectrum,
-    light::Light,
-    transform::{look_at, translate},
-    material::Material,
-    texture::UVMapping2D,
+use rpbtrir::{
+    core::{
+        film::Film,
+        geometry::Point3f,
+        light::Light,
+        material::Material,
+        primitive::{GeometricPrimitive, CompoundPrimitive, Primitive},
+        scene::Scene,
+        shape::Shape,
+        spectrum::Spectrum,
+        texture::UVMapping2D,
+        transform::{look_at, translate},
+        types::Float,
+    },
+    cameras::PerspectiveCamera,
+    films::ImageFilm,
+    filters::MitchellFilter,
+    lights::PointLight,
+    materials::{MatteMaterial, MetalMaterial},
+    renderers::SamplerRenderer,
+    shapes::Sphere,
+    textures::{ConstantTexture, Checkerboard2DTexture, AAMethod},
 };
-use shapes::Sphere;
-use lights::PointLight;
-use renderers::SamplerRenderer;
-use films::ImageFilm;
-use cameras::PerspectiveCamera;
-use materials::{MatteMaterial, MetalMaterial};
-use textures::{ConstantTexture, Checkerboard2DTexture, AAMethod};
-use filters::BoxFilter;
-use filters::MitchellFilter;
 
 fn main() {
     let scene = build_scene();
@@ -73,26 +60,28 @@ fn main() {
 }
 
 fn build_scene() -> Scene {
-    let mut primitives: Vec<Box<Primitive>> = Vec::new();
-
-    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, -1000.0, 0.0), 1000.0)), checker_matte(5000.0))));
-    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(0.0, 1.0, 0.0), 1.0)), checker_matte(10.0))));
-    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-4.0, 1.0, 0.0), 1.0)), checker_matte(10.0))));
-    primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(4.0, 1.0, 0.0), 1.0)), metal())));
+    let mut primitives = vec![
+        geometric_primitive(sphere(Point3f::new(0.0, -1000.0, 0.0), 1000.0), checker_matte(5000.0)),
+        geometric_primitive(sphere(Point3f::new(0.0, 1.0, 0.0), 1.0), checker_matte(10.0)),
+        geometric_primitive(sphere(Point3f::new(-4.0, 1.0, 0.0), 1.0), checker_matte(10.0)),
+        geometric_primitive(sphere(Point3f::new(4.0, 1.0, 0.0), 1.0), metal())
+    ];
 
     for _ in 0..20 {
         let material = if random::<Float>() < 0.4 { metal() } else { checker_matte(10.0) };
-        primitives.push(Box::new(GeometricPrimitive::new(Box::new(build_sphere(Point3f::new(-4.0 + 8.0 * random::<Float>(), 0.5, -4.0 + 8.0 * random::<Float>()), 0.5)), material)));
+        primitives.push(geometric_primitive(sphere(Point3f::new(-4.0 + 8.0 * random::<Float>(), 0.5, -4.0 + 8.0 * random::<Float>()), 0.5), material));
     }
 
-    let lights: Vec<Box<Light>> = vec![
-        Box::new(PointLight::new(Point3f::new(0.0, 5.0, 0.0), 15.0 * Spectrum::new(1.0, 1.0, 1.0))),
-        Box::new(PointLight::new(Point3f::new(-10.0, 5.0, 0.0), 15.0 * Spectrum::new(1.0, 1.0, 1.0))),
-        Box::new(PointLight::new(Point3f::new(10.0, 5.0, 0.0), 15.0 * Spectrum::new(1.0, 1.0, 1.0))),
-        Box::new(PointLight::new(Point3f::new(7.0, 3.0, 0.0), 15.0 * Spectrum::new(1.0, 1.0, 1.0))),
+    let lights = vec![
+        point_light_white(Point3f::new(0.0, 5.0, 0.0), 15.0),
+        point_light_white(Point3f::new(-10.0, 5.0, 0.0), 15.0),
+        point_light_white(Point3f::new(10.0, 5.0, 0.0), 15.0),
+        point_light_white(Point3f::new(7.0, 3.0, 0.0), 15.0),
     ];
 
-    Scene::new(Box::new(CompoundPrimitive::new(primitives)), lights)
+    let root_primitive = Box::new(CompoundPrimitive::new(primitives));
+
+    Scene::new(root_primitive, lights)
 }
 
 fn metal() -> Box<Material> {
@@ -108,8 +97,6 @@ fn checker_matte(scale: Float) -> Box<Material> {
 
     let checker = Checkerboard2DTexture::new(
         Box::new(UVMapping2D::new(scale, scale, 0.0, 0.0)), white, blue, AAMethod::None);
-//    let checker = Checkerboard3DTexture::new(
-//        Box::new(IdentityMapping3D::new(scale(10.0, 10.0, 10.0))), white, blue);
 
     Box::new(MatteMaterial::new(
         Arc::new(checker),
@@ -118,9 +105,17 @@ fn checker_matte(scale: Float) -> Box<Material> {
     ))
 }
 
-fn build_sphere(center: Point3f, radius: Float) -> Sphere {
+fn geometric_primitive(shape: Box<Shape>, material: Box<Material>) -> Box<Primitive> {
+    Box::new(GeometricPrimitive::new(shape, material))
+}
+
+fn point_light_white(point: Point3f, intensity: Float) -> Box<Light> {
+    Box::new(PointLight::new(point, intensity * Spectrum::white()))
+}
+
+fn sphere(center: Point3f, radius: Float) -> Box<Shape> {
     let object_to_world = translate(&center.to_vec());
     let world_to_object = object_to_world.invert();
 
-    Sphere::new(object_to_world, world_to_object, radius)
+    Box::new(Sphere::new(object_to_world, world_to_object, radius))
 }

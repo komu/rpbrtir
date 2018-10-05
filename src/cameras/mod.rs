@@ -1,3 +1,3 @@
-pub mod perspective;
+mod perspective;
 
 pub use self::perspective::PerspectiveCamera;

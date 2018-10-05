@@ -1,3 +1,3 @@
-pub mod random;
+mod random;
 
 pub use self::random::RandomSampler;
