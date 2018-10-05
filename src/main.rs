@@ -35,9 +35,10 @@ fn main() {
     let eye = Point3f::new(13.0, 2.0, -3.0);
     let center = Point3f::new(0.0, 0.0, 0.0);
     let up = vec3(0.0, 1.0, 0.0);
-    let aperture = 0.0;
-    let focal_distance = 1e30;
+    let aperture = 0.2;
+    let focal_distance = 10.0;
     let fov = 20.0;
+    let samples_per_pixel = 8;
 
     let cam_to_world = look_at(&eye, &center, &up);
 
@@ -52,7 +53,7 @@ fn main() {
     {
         let mut cam = PerspectiveCamera::new(&cam_to_world, screen, 0.0, 1.0, aperture, focal_distance, fov, &mut film);
 
-        let mut renderer = SamplerRenderer::new(&mut cam);
+        let mut renderer = SamplerRenderer::new(&mut cam, samples_per_pixel);
         renderer.render(&scene);
     }
 

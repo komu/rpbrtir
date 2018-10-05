@@ -16,15 +16,17 @@ use core::sampler::SamplerWindow;
 pub struct SamplerRenderer<'a> {
     integrator: Box<SurfaceIntegrator>,
     volume_integrator: Box<VolumeIntegrator>,
-    camera: &'a mut Camera
+    camera: &'a mut Camera,
+    samples_per_pixel: usize
 }
 
 impl <'a> SamplerRenderer<'a> {
-    pub fn new(camera: &mut Camera) -> SamplerRenderer {
+    pub fn new(camera: &mut Camera, samples_per_pixel: usize) -> SamplerRenderer {
         SamplerRenderer {
             integrator: Box::new(WhittedIntegrator::new(50)),
             volume_integrator: Box::new(NoOpVolumeIntegrator {}),
-            camera
+            camera,
+            samples_per_pixel
         }
     }
 
@@ -33,7 +35,7 @@ impl <'a> SamplerRenderer<'a> {
         let mut rng = RNG::new();
 
         let win = SamplerWindow::from_dimensions(nx, ny);
-        let mut sampler = RandomSampler::new(win, 4, 0.0, 1.0);
+        let mut sampler = RandomSampler::new(win, self.samples_per_pixel, 0.0, 1.0);
 
         let mut sample = Sample::default();
 
