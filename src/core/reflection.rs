@@ -8,6 +8,7 @@ use core::montecarlo::cosine_sample_hemisphere;
 use core::math::floor_to_int;
 use core::types::PI;
 use core::geometry::spherical_direction;
+use core::math::clamp;
 
 pub struct BSDF<'a> {
     pub dg_shading: &'a DifferentialGeometry<'a>,
@@ -162,6 +163,99 @@ pub trait BxDF {
     }
 }
 
+pub struct SpecularReflection {
+    r: Spectrum,
+    fresnel: Box<Fresnel>,
+}
+
+impl SpecularReflection {
+    pub fn new(r: Spectrum, fresnel: Box<Fresnel>) -> SpecularReflection {
+        SpecularReflection { r, fresnel }
+    }
+}
+
+impl BxDF for SpecularReflection {
+    fn f(&self, _wo: &Vector3f, _wi: &Vector3f) -> Spectrum {
+        Spectrum::black()
+    }
+
+    fn sample_f(&self, wo: Vector3f, wi: &mut Vector3f, u1: Float, u2: Float) -> (Spectrum, Float) {
+        // Compute perfect specular reflection direction
+        *wi = vec3(-wo.x, -wo.y, wo.z);
+        let l = self.fresnel.evaluate(cos_theta(&wo)) * self.r / abs_cos_theta(wi);
+        (l, 1.0)
+    }
+
+    fn bxdf_type(&self) -> BxDFType {
+        BxDFType::BSDF_REFLECTION | BxDFType::BSDF_SPECULAR
+    }
+
+    fn pdf(&self, wo: &Vector3f, wi: &Vector3f) -> Float {
+        0.0
+    }
+}
+
+pub struct SpecularTransmission {
+    t: Spectrum,
+    etai: Float,
+    etat: Float,
+    fresnel: FresnelDielectric,
+}
+
+impl SpecularTransmission {
+    pub fn new(t: Spectrum, etai: Float, etat: Float) -> SpecularTransmission {
+        SpecularTransmission {
+            t,
+            etai,
+            etat,
+            fresnel: FresnelDielectric::new(etai, etat),
+        }
+    }
+}
+
+impl BxDF for SpecularTransmission {
+    fn f(&self, wo: &Vector3f, wi: &Vector3f) -> Spectrum {
+        Spectrum::black()
+    }
+
+    fn sample_f(&self, wo: Vector3f, wi: &mut Vector3f, u1: Float, u2: Float) -> (Spectrum, Float) {
+        // Figure out which $\eta$ is incident and which is transmitted
+        let entering = cos_theta(&wo) > 0.0;
+        let (ei, et) = if entering { (self.etai, self.etat) } else { (self.etat, self.etai) };
+
+        // Compute transmitted ray direction
+        let sini2 = sin_theta2(&wo);
+        let eta = ei / et;
+        let sint2 = eta * eta * sini2;
+
+        // Handle total internal reflection for transmission
+        if sint2 >= 1.0 {
+            return (Spectrum::black(), 0.0);
+        }
+
+        let mut cost = (1.0 - sint2).max(0.0).sqrt();
+        if entering {
+            cost = -cost;
+        }
+
+        let sint_over_sini = eta;
+        *wi = Vector3f::new(sint_over_sini * -wo.x, sint_over_sini * -wo.y, cost);
+
+        let f = self.fresnel.evaluate(cos_theta(&wo));
+        let l = /*(ei*ei)/(et*et) * */ (Spectrum::white() - f) * self.t / abs_cos_theta(wi);
+
+        (l, 1.0)
+    }
+
+    fn bxdf_type(&self) -> BxDFType {
+        BxDFType::BSDF_TRANSMISSION | BxDFType::BSDF_SPECULAR
+    }
+
+    fn pdf(&self, wo: &Vector3f, wi: &Vector3f) -> Float {
+        0.0
+    }
+}
+
 pub struct Lambertian {
     r: Spectrum
 }
@@ -287,6 +381,52 @@ impl Fresnel for FresnelConductor {
     }
 }
 
+pub struct FresnelDielectric {
+    eta_i: Float,
+    eta_t: Float,
+}
+
+impl FresnelDielectric {
+    pub fn new(eta_i: Float, eta_t: Float) -> FresnelDielectric {
+        FresnelDielectric { eta_i, eta_t }
+    }
+}
+
+impl Fresnel for FresnelDielectric {
+    fn evaluate(&self, cosi: Float) -> Spectrum {
+        // Compute Fresnel reflectance for dielectric
+        let cosi = clamp(cosi, -1.0, 1.0);
+
+        // Compute indices of refraction for dielectric
+        let entering = cosi > 0.0;
+        let (ei, et) = if entering { (self.eta_i, self.eta_t) } else { (self.eta_t, self.eta_i) };
+
+        // Compute _sint_ using Snell's law
+        let sint = ei / et * (1.0 - cosi * cosi).max(0.0).sqrt();
+        if sint >= 1.0 {
+            // Handle total internal reflection
+            Spectrum::white()
+        } else {
+            let cost = (1.0 - sint * sint).max(0.0).sqrt();
+            fr_diel(cosi.abs(), cost, Spectrum::from(ei), Spectrum::from(et))
+        }
+    }
+}
+
+pub struct FresnelNoOp {}
+
+impl Fresnel for FresnelNoOp {
+    fn evaluate(&self, _cosi: Float) -> Spectrum {
+        Spectrum::white()
+    }
+}
+
+fn fr_diel(cosi: Float, cost: Float, etai: Spectrum, etat: Spectrum) -> Spectrum {
+    let rparl = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
+    let rperp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
+    (rparl * rparl + rperp * rperp) / 2.0
+}
+
 fn fr_cond(cosi: Float, eta: Spectrum, k: &Spectrum) -> Spectrum {
     let tmp = (eta * eta + *k * *k) * cosi * cosi;
     let rparl2 = (tmp - (2.0 * eta * cosi) + Spectrum::white()) / (tmp + (2.0 * eta * cosi) + Spectrum::white());
@@ -301,7 +441,7 @@ fn fr_cond(cosi: Float, eta: Spectrum, k: &Spectrum) -> Spectrum {
 pub struct Microfacet {
     reflectance: Spectrum,
     fresnel: Box<Fresnel>,
-    distribution: Box<MicrofacetDistribution>
+    distribution: Box<MicrofacetDistribution>,
 }
 
 impl Microfacet {
@@ -320,17 +460,16 @@ impl Microfacet {
 }
 
 impl BxDF for Microfacet {
-
     fn f(&self, wo: &Vector3f, wi: &Vector3f) -> Spectrum {
         let cos_theta_o = abs_cos_theta(wo);
         let cos_theta_i = abs_cos_theta(wi);
         if cos_theta_i == 0.0 || cos_theta_o == 0.0 {
-            return Spectrum::black()
+            return Spectrum::black();
         }
 
         let mut wh: Vector3f = wi + wo;
         if wh.x == 0. && wh.y == 0. && wh.z == 0. {
-            return Spectrum::black()
+            return Spectrum::black();
         }
 
         wh = wh.normalize();
@@ -370,3 +509,14 @@ fn same_hemisphere(w: &Vector3f, wp: &Vector3f) -> bool {
 fn abs_cos_theta(w: &Vector3f) -> Float {
     w.z.abs()
 }
+
+#[inline]
+fn cos_theta(w: &Vector3f) -> Float {
+    w.z
+}
+
+#[inline]
+fn sin_theta2(w: &Vector3f) -> Float {
+    (1.0 - cos_theta(w) * cos_theta(w)).max(0.0)
+}
+

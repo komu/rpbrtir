@@ -30,6 +30,7 @@ use rpbtrir::{
 };
 use rpbtrir::core::light::AreaLight;
 use rpbtrir::lights::DiffuseAreaLight;
+use rpbtrir::materials::GlassMaterial;
 
 fn main() {
     let scene = build_scene();
@@ -37,8 +38,8 @@ fn main() {
     let eye = Point3f::new(13.0, 2.0, -3.0);
     let center = Point3f::new(0.0, 0.0, 0.0);
     let up = vec3(0.0, 1.0, 0.0);
-    let aperture = 0.2;
-    let focal_distance = 10.0;
+    let aperture = 0.05;
+    let focal_distance = 15.0;
     let fov = 20.0;
     let samples_per_pixel = 8;
 
@@ -67,13 +68,14 @@ fn build_scene() -> Scene {
 
     let mut primitives = vec![
         geometric_primitive(sphere(Point3f::new(0.0, -1000.0, 0.0), 1000.0), checker_matte(5000.0), area_light.clone()),
-        geometric_primitive(sphere(Point3f::new(0.0, 1.0, 0.0), 1.0), checker_matte(10.0), area_light.clone()),
+        geometric_primitive(sphere(Point3f::new(0.0, 1.0, 0.0), 1.0), glass(), area_light.clone()),
         geometric_primitive(sphere(Point3f::new(-4.0, 1.0, 0.0), 1.0), checker_matte(10.0), area_light.clone()),
         geometric_primitive(sphere(Point3f::new(4.0, 1.0, 0.0), 1.0), metal(), area_light.clone())
     ];
 
     for _ in 0..20 {
-        let material = if random::<Float>() < 0.4 { metal() } else { checker_matte(10.0) };
+        let r = random::<Float>();
+        let material = if r < 0.4 { metal() } else if r < 0.8 { glass() } else { checker_matte(10.0) };
         primitives.push(geometric_primitive(sphere(Point3f::new(-4.0 + 8.0 * random::<Float>(), 0.5, -4.0 + 8.0 * random::<Float>()), 0.5), material, area_light.clone()));
     }
 
@@ -99,6 +101,10 @@ fn metal() -> Box<Material> {
     let k = Arc::new(ConstantTexture::new(Spectrum::new(0.9, 0.4, 0.5)));
     let roughness = Arc::new(ConstantTexture::new(0.05));
     Box::new(MetalMaterial::new(eta, k, roughness, None))
+}
+
+fn glass() -> Box<Material> {
+    Box::new(GlassMaterial::default())
 }
 
 fn checker_matte(scale: Float) -> Box<Material> {

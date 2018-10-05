@@ -23,7 +23,7 @@ pub struct SamplerRenderer<'a> {
 impl <'a> SamplerRenderer<'a> {
     pub fn new(camera: &mut Camera, samples_per_pixel: usize) -> SamplerRenderer {
         SamplerRenderer {
-            integrator: Box::new(WhittedIntegrator::new(50)),
+            integrator: Box::new(WhittedIntegrator::new(5)),
             volume_integrator: Box::new(NoOpVolumeIntegrator {}),
             camera,
             samples_per_pixel
