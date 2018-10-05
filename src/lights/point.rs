@@ -4,9 +4,10 @@ use core::geometry::Point3f;
 use core::light::LightSample;
 use core::light::VisibilityTester;
 use core::geometry::Vector3f;
-use core::types::Float;
+use core::types::{PI, Float};
 use core::geometry::distance_squared;
 use cgmath::prelude::*;
+use core::scene::Scene;
 
 pub struct PointLight {
     pos: Point3f,
@@ -25,5 +26,9 @@ impl Light for PointLight {
         visibility.set_segment(*p, p_epsilon, self.pos, 0.0, time);
         let c = self.intensity / distance_squared(&self.pos, p);
         (c, wi, 1.0)
+    }
+
+    fn power(&self, scene: &Scene) -> Spectrum {
+        4.0 * PI * self.intensity
     }
 }

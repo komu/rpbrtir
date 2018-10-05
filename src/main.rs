@@ -28,6 +28,8 @@ use rpbtrir::{
     shapes::Sphere,
     textures::{ConstantTexture, Checkerboard2DTexture, AAMethod},
 };
+use rpbtrir::core::light::AreaLight;
+use rpbtrir::lights::DiffuseAreaLight;
 
 fn main() {
     let scene = build_scene();
@@ -61,16 +63,18 @@ fn main() {
 }
 
 fn build_scene() -> Scene {
+    let area_light = Some(diffuse_area_light(Point3f::new(0.0, 10.0, 0.0), 0.01));
+
     let mut primitives = vec![
-        geometric_primitive(sphere(Point3f::new(0.0, -1000.0, 0.0), 1000.0), checker_matte(5000.0)),
-        geometric_primitive(sphere(Point3f::new(0.0, 1.0, 0.0), 1.0), checker_matte(10.0)),
-        geometric_primitive(sphere(Point3f::new(-4.0, 1.0, 0.0), 1.0), checker_matte(10.0)),
-        geometric_primitive(sphere(Point3f::new(4.0, 1.0, 0.0), 1.0), metal())
+        geometric_primitive(sphere(Point3f::new(0.0, -1000.0, 0.0), 1000.0), checker_matte(5000.0), area_light.clone()),
+        geometric_primitive(sphere(Point3f::new(0.0, 1.0, 0.0), 1.0), checker_matte(10.0), area_light.clone()),
+        geometric_primitive(sphere(Point3f::new(-4.0, 1.0, 0.0), 1.0), checker_matte(10.0), area_light.clone()),
+        geometric_primitive(sphere(Point3f::new(4.0, 1.0, 0.0), 1.0), metal(), area_light.clone())
     ];
 
     for _ in 0..20 {
         let material = if random::<Float>() < 0.4 { metal() } else { checker_matte(10.0) };
-        primitives.push(geometric_primitive(sphere(Point3f::new(-4.0 + 8.0 * random::<Float>(), 0.5, -4.0 + 8.0 * random::<Float>()), 0.5), material));
+        primitives.push(geometric_primitive(sphere(Point3f::new(-4.0 + 8.0 * random::<Float>(), 0.5, -4.0 + 8.0 * random::<Float>()), 0.5), material, area_light.clone()));
     }
 
     let lights = vec![
@@ -83,6 +87,11 @@ fn build_scene() -> Scene {
     let root_primitive = Box::new(CompoundPrimitive::new(primitives));
 
     Scene::new(root_primitive, lights)
+}
+
+fn diffuse_area_light(center: Point3f, intensity: Float) -> Arc<AreaLight> {
+    let object_to_world = translate(&center.to_vec());
+    Arc::new(DiffuseAreaLight::new(object_to_world, intensity * Spectrum::white(), 8, sphere2(Point3f::new(0.0, 0.0, 0.0), 4.0)))
 }
 
 fn metal() -> Box<Material> {
@@ -106,8 +115,8 @@ fn checker_matte(scale: Float) -> Box<Material> {
     ))
 }
 
-fn geometric_primitive(shape: Box<Shape>, material: Box<Material>) -> Box<Primitive> {
-    Box::new(GeometricPrimitive::new(shape, material, None))
+fn geometric_primitive(shape: Box<Shape>, material: Box<Material>, area_light: Option<Arc<AreaLight>>) -> Box<Primitive> {
+    Box::new(GeometricPrimitive::new(shape, material, area_light))
 }
 
 fn point_light_white(point: Point3f, intensity: Float) -> Box<Light> {
@@ -119,4 +128,11 @@ fn sphere(center: Point3f, radius: Float) -> Box<Shape> {
     let world_to_object = object_to_world.invert();
 
     Box::new(Sphere::new(object_to_world, world_to_object, radius))
+}
+
+fn sphere2(center: Point3f, radius: Float) -> Arc<Shape> {
+    let object_to_world = translate(&center.to_vec());
+    let world_to_object = object_to_world.invert();
+
+    Arc::new(Sphere::new(object_to_world, world_to_object, radius))
 }

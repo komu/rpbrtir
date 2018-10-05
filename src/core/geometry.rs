@@ -2,6 +2,7 @@ use cgmath::{Point3, Vector3};
 use core::types::{Float, INFINITY};
 use cgmath::{vec3, prelude::*};
 use core::math::lerp;
+use std::ops::MulAssign;
 
 pub type Point3f = Point3<Float>;
 pub type Vector3f = Vector3<Float>;
@@ -80,6 +81,18 @@ impl Normal {
 
     pub fn from_vector(v: Vector3f) -> Normal {
         Normal { v }
+    }
+
+    pub fn normalize(&self) -> Normal {
+        Normal { v: self.v.normalize() }
+    }
+}
+
+impl MulAssign<Float> for Normal {
+    fn mul_assign(&mut self, rhs: Float) {
+        self.v.x *= rhs;
+        self.v.y *= rhs;
+        self.v.z *= rhs;
     }
 }
 

@@ -7,6 +7,9 @@ use core::{
     types::{Float, PI},
 };
 use cgmath::{prelude::*, vec3};
+use core::geometry::Vector3f;
+use core::geometry::Point3f;
+use core::montecarlo::uniform_sample_sphere;
 
 #[derive(Debug)]
 pub struct Sphere {
@@ -18,6 +21,7 @@ pub struct Sphere {
     theta_min: Float,
     theta_max: Float,
     phi_max: Float,
+    reverse_orientation: bool
 }
 
 impl Sphere {
@@ -44,6 +48,7 @@ impl Sphere {
             theta_min: clamp(zmin / radius, -1.0, 1.0).acos(),
             theta_max: clamp(zmax / radius, -1.0, 1.0).acos(),
             phi_max: radians(clamp(pm, 0.0, 360.0)),
+            reverse_orientation: false
         }
     }
 }
@@ -161,7 +166,68 @@ impl Shape for Sphere {
         }
     }
 
+    fn pdf(&self, p: &Point3f, wi: &Vector3f) -> Float {
+        unimplemented!()
+        /*
+        let Pcenter = (*ObjectToWorld)(Point(0,0,0));
+        // Return uniform weight if point inside sphere
+        if (distance_squared(p, Pcenter) - radius*radius < 1e-4)
+        return Shape::Pdf(p, wi);
+
+        // Compute general sphere weight
+        float sinThetaMax2 = radius*radius / DistanceSquared(p, Pcenter);
+        float cosThetaMax = sqrtf(max(0.f, 1.f - sinThetaMax2));
+        return UniformConePdf(cosThetaMax);
+        */
+    }
+
     fn get_object_to_world(&self) -> &Transform {
         &self.object_to_world
+    }
+
+    fn area(&self) -> Float {
+        self.phi_max * self.radius * (self.zmax - self.zmin)
+    }
+
+    fn sample_point(&self, p: &Point3f, u1: Float, u2: Float) -> (Point3f, Normal) {
+        /*
+        Point Sphere::Sample(const Point &p, float u1, float u2,
+                     Normal *ns) const {
+    // Compute coordinate system for sphere sampling
+    Point Pcenter = (*ObjectToWorld)(Point(0,0,0));
+    Vector wc = Normalize(Pcenter - p);
+    Vector wcX, wcY;
+    CoordinateSystem(wc, &wcX, &wcY);
+
+    // Sample uniformly on sphere if $\pt{}$ is inside it
+    if (DistanceSquared(p, Pcenter) - radius*radius < 1e-4f)
+        return Sample(u1, u2, ns);
+
+    // Sample sphere uniformly inside subtended cone
+    float sinThetaMax2 = radius*radius / DistanceSquared(p, Pcenter);
+    float cosThetaMax = sqrtf(max(0.f, 1.f - sinThetaMax2));
+    DifferentialGeometry dgSphere;
+    float thit, rayEpsilon;
+    Point ps;
+    Ray r(p, UniformSampleCone(u1, u2, cosThetaMax, wcX, wcY, wc), 1e-3f);
+    if (!Intersect(r, &thit, &rayEpsilon, &dgSphere))
+        thit = Dot(Pcenter - p, Normalize(r.d));
+    ps = r(thit);
+    *ns = Normal(Normalize(ps - Pcenter));
+    if (ReverseOrientation) *ns *= -1.f;
+    return ps;
+}
+*/
+        unimplemented!()
+    }
+
+    fn sample(&self, u1: Float, u2: Float) -> (Point3f, Normal) {
+        let p = Point3f::new(0.0, 0.0, 0.0) + self.radius * uniform_sample_sphere(u1, u2);
+        let mut ns = self.object_to_world.transform_normal(Normal::new(p.x, p.y, p.z)).normalize();
+        if self.reverse_orientation {
+            ns *= -1.0;
+        }
+
+        (self.object_to_world.transform_point(p), ns)
     }
 }

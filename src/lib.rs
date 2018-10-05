@@ -4,6 +4,7 @@ extern crate rand;
 #[macro_use]
 extern crate bitflags;
 extern crate array_init;
+extern crate superslice;
 
 pub mod cameras;
 pub mod core;

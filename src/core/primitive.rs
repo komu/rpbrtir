@@ -8,6 +8,7 @@ use core::{
 };
 use core::transform::Transform;
 use core::light::AreaLight;
+use std::sync::Arc;
 
 pub trait Primitive {
     fn intersect(&self, ray: &mut Ray) -> Option<Intersection>;
@@ -19,11 +20,11 @@ pub trait Primitive {
 pub struct GeometricPrimitive {
     shape: Box<Shape>,
     material: Box<Material>,
-    area_light: Option<Box<AreaLight>>
+    area_light: Option<Arc<AreaLight>>
 }
 
 impl GeometricPrimitive {
-    pub fn new(shape: Box<Shape>, material: Box<Material>, area_light: Option<Box<AreaLight>>) -> GeometricPrimitive {
+    pub fn new(shape: Box<Shape>, material: Box<Material>, area_light: Option<Arc<AreaLight>>) -> GeometricPrimitive {
         GeometricPrimitive {
             shape,
             material,
