@@ -13,13 +13,14 @@ use core::geometry::Normal;
 use core::shape::Shape;
 use std::sync::Arc;
 use core::montecarlo::Distribution1D;
+use core::sampler::{SampleOffset1d, SampleOffset2d};
 
 pub trait Light {
     fn sample_l(
         &self,
         p: &Point3f,
         p_epsilon: Float,
-        ls: LightSample,
+        ls: &LightSample,
         time: Float,
         visibility: &mut VisibilityTester)
         -> (Spectrum, Vector3f, Float);
@@ -28,7 +29,13 @@ pub trait Light {
         Spectrum::black()
     }
 
+    fn pdf(&self, p: &Point3f, wi: &Vector3f) -> Float;
+
     fn power(&self, scene: &Scene) -> Spectrum;
+
+    fn num_samples(&self) -> u32;
+
+    fn is_delta_light(&self) -> bool;
 }
 
 pub trait AreaLight : Light {
@@ -41,10 +48,40 @@ pub struct LightSample {
 }
 
 impl LightSample {
-    pub fn new(rng: &mut RNG) -> LightSample {
+    pub fn new(sample: &Sample, offsets: &LightSampleOffsets, n: usize) -> LightSample {
+        let u_pos = [
+            sample[offsets.pos_offset][2 * n],
+            sample[offsets.pos_offset][2 * n + 1]
+        ];
+        let u_component = sample[offsets.component_offset][n];
+
+        debug_assert!(u_pos[0] >= 0.0 && u_pos[0] < 1.0);
+        debug_assert!(u_pos[1] >= 0.0 && u_pos[1] < 1.0);
+        debug_assert!(u_component >= 0.0 && u_component < 1.0);
+
+        LightSample { u_pos, u_component }
+    }
+
+    pub fn gen(rng: &mut RNG) -> LightSample {
         LightSample {
             u_component: rng.random_float(),
             u_pos: [rng.random_float(), rng.random_float()]
+        }
+    }
+}
+
+pub struct LightSampleOffsets {
+    pub n_samples: u32,
+    pub component_offset: SampleOffset1d,
+    pub pos_offset: SampleOffset2d,
+}
+
+impl LightSampleOffsets {
+    pub fn new(count: u32, sample: &mut Sample) -> LightSampleOffsets {
+        LightSampleOffsets {
+            n_samples: count,
+            component_offset: sample.add_1d(count),
+            pos_offset: sample.add_2d(count),
         }
     }
 }

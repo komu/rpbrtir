@@ -6,6 +6,7 @@ use std::ops::Add;
 use std::iter::Sum;
 use core::math::clamp;
 use std::ops::Sub;
+use std::ops::MulAssign;
 
 #[derive(Clone, Copy)]
 pub struct Spectrum {
@@ -112,6 +113,14 @@ impl Mul<Spectrum> for Float {
             g: self * rhs.g,
             b: self * rhs.b
         }
+    }
+}
+
+impl MulAssign<Float> for Spectrum {
+    fn mul_assign(&mut self, rhs: Float) {
+        self.r *= rhs;
+        self.g *= rhs;
+        self.b *= rhs;
     }
 }
 

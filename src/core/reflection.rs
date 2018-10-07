@@ -9,6 +9,9 @@ use core::math::floor_to_int;
 use core::types::PI;
 use core::geometry::spherical_direction;
 use core::math::clamp;
+use core::sampler::Sample;
+use core::sampler::SampleOffset1d;
+use core::sampler::SampleOffset2d;
 
 pub struct BSDF<'a> {
     pub dg_shading: DifferentialGeometry<'a>,
@@ -47,6 +50,30 @@ impl<'a> BSDF<'a> {
         BSDF { dg_shading, ng, nn, sn, tn, eta, bxdfs: Vec::new() }
     }
 
+    pub fn pdf(&self, wo_w: &Vector3f, wi_w: &Vector3f, flags: BxDFType) -> Float {
+        if self.bxdfs.is_empty() {
+            return 0.0;
+        }
+
+        let wo = self.world_to_local(wo_w);
+        let wi = self.world_to_local(wi_w);
+        let mut pdf = 0.0;
+        let mut matching_comps = 0;
+
+        for bxdf in &self.bxdfs {
+            if bxdf.matches_flags(flags) {
+                matching_comps += 1;
+                pdf += bxdf.pdf(&wo, &wi);
+            }
+        }
+
+        if matching_comps > 0 { pdf / (matching_comps as Float) } else { 0.0 }
+    }
+
+    pub fn pdf_all(&self, wo: &Vector3f, wi: &Vector3f, flags: BxDFType) -> Float {
+        self.pdf(wo, wi, BxDFType::BSDF_ALL)
+    }
+
     pub fn f_all(&self, wo_w: &Vector3f, wi_w: &Vector3f) -> Spectrum {
         self.f(wo_w, wi_w, BxDFType::BSDF_ALL)
     }
@@ -67,7 +94,7 @@ impl<'a> BSDF<'a> {
             .sum()
     }
 
-    pub fn sample_f(&self, wo_w: &Vector3f, bsdf_sample: BSDFSample, mut flags: BxDFType) -> Option<(Spectrum, Vector3f, Float, BxDFType)> {
+    pub fn sample_f(&self, wo_w: &Vector3f, bsdf_sample: &BSDFSample, mut flags: BxDFType) -> Option<(Spectrum, Vector3f, Float, BxDFType)> {
         // Choose which _BxDF_ to sample
         let matching_comps = self.num_components(flags);
 
@@ -145,7 +172,6 @@ impl<'a> BSDF<'a> {
 
 pub trait BxDF {
     fn matches_flags(&self, flags: BxDFType) -> bool {
-//        true
         (self.bxdf_type().bits & flags.bits) == self.bxdf_type().bits
     }
 
@@ -296,10 +322,41 @@ pub struct BSDFSample {
 }
 
 impl BSDFSample {
-    pub fn new(rng: &mut RNG) -> BSDFSample {
+
+    pub fn new(sample: &Sample, offsets: &BSDFSampleOffsets, n: usize) -> BSDFSample {
+        let u_dir = [
+            sample[offsets.dir_offset][2 * n],
+            sample[offsets.dir_offset][2 * n + 1]
+        ];
+        let u_component = sample[offsets.component_offset][n];
+
+        debug_assert!(u_dir[0] >= 0.0 && u_dir[0] < 1.0);
+        debug_assert!(u_dir[1] >= 0.0 && u_dir[1] < 1.0);
+        debug_assert!(u_component >= 0.0 && u_component < 1.0);
+
+        BSDFSample { u_dir, u_component }
+    }
+
+    pub fn gen(rng: &mut RNG) -> BSDFSample {
         BSDFSample {
             u_component: rng.random_float(),
             u_dir: [rng.random_float(), rng.random_float()],
+        }
+    }
+}
+
+pub struct BSDFSampleOffsets {
+    n_samples: u32,
+    component_offset: SampleOffset1d,
+    dir_offset: SampleOffset2d,
+}
+
+impl BSDFSampleOffsets {
+    pub fn new(count: u32, sample: &mut Sample) -> BSDFSampleOffsets {
+        BSDFSampleOffsets {
+            n_samples: count,
+            component_offset: sample.add_1d(count),
+            dir_offset: sample.add_2d(count),
         }
     }
 }

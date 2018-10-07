@@ -122,3 +122,10 @@ impl Distribution1D {
         (offset, pdf)
     }
 }
+
+#[inline]
+pub fn power_heuristic(nf: i32, f_pdf: Float, ng: i32, g_pdf: Float) -> Float {
+    let f = (nf as Float) * f_pdf;
+    let g = (ng as Float) * g_pdf;
+    (f*f) / (f*f + g*g)
+}

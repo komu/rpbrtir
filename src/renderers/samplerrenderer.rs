@@ -12,6 +12,7 @@ use core::integrator::VolumeIntegrator;
 use core::integrator::NoOpVolumeIntegrator;
 use samplers::RandomSampler;
 use core::sampler::SamplerWindow;
+use integrators::DirectLightingIntegrator;
 
 pub struct SamplerRenderer<'a> {
     integrator: Box<SurfaceIntegrator>,
@@ -23,7 +24,7 @@ pub struct SamplerRenderer<'a> {
 impl <'a> SamplerRenderer<'a> {
     pub fn new(camera: &mut Camera, samples_per_pixel: usize) -> SamplerRenderer {
         SamplerRenderer {
-            integrator: Box::new(WhittedIntegrator::new(5)),
+            integrator: Box::new(DirectLightingIntegrator::default()),
             volume_integrator: Box::new(NoOpVolumeIntegrator {}),
             camera,
             samples_per_pixel
@@ -37,7 +38,7 @@ impl <'a> SamplerRenderer<'a> {
         let win = SamplerWindow::from_dimensions(nx, ny);
         let mut sampler = RandomSampler::new(win, self.samples_per_pixel, 0.0, 1.0);
 
-        let mut sample = Sample::default();
+        let mut sample = Sample::new(&sampler, Some(self.integrator.as_mut()), Some(self.volume_integrator.as_mut()), scene);
 
         loop {
             let count = sampler.get_more_samples(&mut sample, &mut rng);
@@ -46,7 +47,7 @@ impl <'a> SamplerRenderer<'a> {
             }
 
             let (mut r, _) = self.camera.generate_ray_differential(&sample.cam);
-            let li = self.li(&scene, &mut r, None, &mut rng);
+            let li = self.li(&scene, &mut r, Some(&sample), &mut rng);
 
             self.camera.get_film().add_sample(&sample.cam, &li);
         }

@@ -21,14 +21,26 @@ impl PointLight {
 }
 
 impl Light for PointLight {
-    fn sample_l(&self, p: &Point3f, p_epsilon: Float, _: LightSample, time: Float, visibility: &mut VisibilityTester) -> (Spectrum, Vector3f, Float) {
+    fn sample_l(&self, p: &Point3f, p_epsilon: Float, _: &LightSample, time: Float, visibility: &mut VisibilityTester) -> (Spectrum, Vector3f, Float) {
         let wi = (self.pos - p).normalize();
         visibility.set_segment(*p, p_epsilon, self.pos, 0.0, time);
         let c = self.intensity / distance_squared(&self.pos, p);
         (c, wi, 1.0)
     }
 
+    fn pdf(&self, p: &Point3f, wi: &Vector3f) -> Float {
+        0.0
+    }
+
     fn power(&self, scene: &Scene) -> Spectrum {
         4.0 * PI * self.intensity
+    }
+
+    fn num_samples(&self) -> u32 {
+        1
+    }
+
+    fn is_delta_light(&self) -> bool {
+        true
     }
 }

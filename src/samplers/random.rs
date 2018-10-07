@@ -4,6 +4,7 @@ use core::{
     types::Float,
 };
 use core::math::lerp;
+use core::sampler::SampleOffset1d;
 
 pub struct RandomSampler {
     window: SamplerWindow,
@@ -88,22 +89,24 @@ impl Sampler for RandomSampler {
         }
 
         // Return next RandomSampler sample point
-
         sample.cam.image_x = self.image_samples[2 * self.sample_pos];
         sample.cam.image_y = self.image_samples[2 * self.sample_pos + 1];
         sample.cam.lens_u = self.lens_samples[2 * self.sample_pos];
         sample.cam.lens_v = self.lens_samples[2 * self.sample_pos + 1];
         sample.cam.time = lerp(self.time_samples[self.sample_pos], self.shutter_open, self.shutter_close);
 
-        // TODO Generate stratified samples for integrators
-        /*
-        for (uint32_t i = 0; i < sample->n1D.size(); ++i)
-        for (uint32_t j = 0; j < sample->n1D[i]; ++j)
-            sample->oneD[i][j] = rng.RandomFloat();
-        for (uint32_t i = 0; i < sample->n2D.size(); ++i)
-        for (uint32_t j = 0; j < 2*sample->n2D[i]; ++j)
-            sample->twoD[i][j] = rng.RandomFloat();
-        */
+        for (i, len) in sample.offsets_1d() {
+            for j in 0..len {
+                let ref mut foo = sample[i];
+                foo[j] = rng.random_float();
+            }
+        }
+
+        for (i, len) in sample.offsets_2d() {
+            for j in 0..(2*len) {
+                sample[i][j] = rng.random_float();
+            }
+        }
 
         self.sample_pos += 1;
         1
@@ -113,7 +116,7 @@ impl Sampler for RandomSampler {
         1
     }
 
-    fn get_sub_sampler(&self, num: u32, count: u32) -> Option<Box<Self>> {
+    fn get_sub_sampler(&self, num: u32, count: u32) -> Option<Box<Sampler>> {
         let sub_window = self.window.compute_sub_window(num, count);
         if sub_window.is_empty() {
             None
