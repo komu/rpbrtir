@@ -11,7 +11,7 @@ use core::geometry::spherical_direction;
 use core::math::clamp;
 
 pub struct BSDF<'a> {
-    pub dg_shading: &'a DifferentialGeometry<'a>,
+    pub dg_shading: DifferentialGeometry<'a>,
     nn: Normal,
     ng: Normal,
     sn: Vector3f,
@@ -36,11 +36,11 @@ bitflags! {
 }
 
 impl<'a> BSDF<'a> {
-    pub fn new<'b>(dg_shading: &'b DifferentialGeometry<'b>, ng: Normal) -> BSDF<'b> {
+    pub fn new(dg_shading: DifferentialGeometry, ng: Normal) -> BSDF {
         BSDF::new_with_eta(dg_shading, ng, 1.0)
     }
 
-    pub fn new_with_eta<'b>(dg_shading: &'b DifferentialGeometry<'b>, ng: Normal, eta: Float) -> BSDF<'b> {
+    pub fn new_with_eta(dg_shading: DifferentialGeometry, ng: Normal, eta: Float) -> BSDF {
         let nn = dg_shading.nn;
         let sn = dg_shading.dpdu.normalize();
         let tn = nn.v.cross(sn);

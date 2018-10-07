@@ -53,6 +53,15 @@ impl Transform {
     pub fn invert(&self) -> Transform {
         Transform { m: self.m_inv, m_inv: self.m }
     }
+
+    pub fn swaps_handedness(&self) -> bool {
+        // TODO: check if this causes problem with row major vs column major
+        let m = &self.m;
+        let det = (m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])) -
+            (m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])) +
+            (m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]));
+        return det < 0.0;
+    }
 }
 
 impl<'a, 'b> Mul<&'b Transform> for &'a Transform {

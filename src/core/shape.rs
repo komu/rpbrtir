@@ -42,4 +42,8 @@ pub trait Shape : Debug {
     fn refine(&self, shapes: &mut Vec<Arc<Shape>>) {
         unimplemented!("refine called for non-refinable shape")
     }
+
+    fn reverse_orientation(&self) -> bool;
+
+    fn transform_swaps_handedness(&self) -> bool;
 }

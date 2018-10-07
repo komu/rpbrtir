@@ -21,7 +21,8 @@ pub struct Sphere {
     theta_min: Float,
     theta_max: Float,
     phi_max: Float,
-    reverse_orientation: bool
+    reverse_orientation: bool,
+    transform_swaps_handedness: bool
 }
 
 impl Sphere {
@@ -39,6 +40,7 @@ impl Sphere {
                        pm: Float) -> Sphere {
         let zmin = clamp(z0.min(z1), -radius, radius);
         let zmax = clamp(z0.max(z1), -radius, radius);
+        let transform_swaps_handedness = object_to_world.swaps_handedness();
         Sphere {
             object_to_world,
             world_to_object,
@@ -48,7 +50,8 @@ impl Sphere {
             theta_min: clamp(zmin / radius, -1.0, 1.0).acos(),
             theta_max: clamp(zmax / radius, -1.0, 1.0).acos(),
             phi_max: radians(clamp(pm, 0.0, 360.0)),
-            reverse_orientation: false
+            reverse_orientation: false,
+            transform_swaps_handedness
         }
     }
 }
@@ -142,8 +145,8 @@ impl Shape for Sphere {
 
             // Compute $\dndu$ and $\dndv$ from fundamental form coefficients
             let inv_egf2 = 1.0 / (E * G - F * F);
-            let dndu = Normal::from_vector((f * F - e * G) * inv_egf2 * dpdu + (e * F - f * E) * inv_egf2 * dpdv);
-            let dndv = Normal::from_vector((g * F - f * G) * inv_egf2 * dpdu + (f * F - g * E) * inv_egf2 * dpdv);
+            let dndu = Normal::from((f * F - e * G) * inv_egf2 * dpdu + (e * F - f * E) * inv_egf2 * dpdv);
+            let dndv = Normal::from((g * F - f * G) * inv_egf2 * dpdu + (f * F - g * E) * inv_egf2 * dpdv);
 
             // Initialize _DifferentialGeometry_ from parametric information
 
@@ -229,5 +232,13 @@ impl Shape for Sphere {
         }
 
         (self.object_to_world.transform_point(p), ns)
+    }
+
+    fn reverse_orientation(&self) -> bool {
+        self.reverse_orientation
+    }
+
+    fn transform_swaps_handedness(&self) -> bool {
+        self.transform_swaps_handedness
     }
 }

@@ -19,7 +19,7 @@ pub struct DifferentialGeometry<'a> {
     pub dndv: Normal,
     pub u: Float,
     pub v: Float,
-    pub sh: &'a Shape,
+    pub shape: &'a Shape,
     pub differentials: RefCell<Differentials>,
 }
 
@@ -54,17 +54,17 @@ impl<'a> DifferentialGeometry<'a> {
                dndv: Normal,
                u: Float,
                v: Float,
-               sh: &'a Shape) -> DifferentialGeometry<'a> {
+               shape: &'a Shape) -> DifferentialGeometry<'a> {
         DifferentialGeometry {
             p,
-            nn: Normal::from_vector(dpdu.cross(dpdv).normalize()),
+            nn: Normal::from(dpdu.cross(dpdv).normalize()),
             dpdu,
             dpdv,
             dndu,
             dndv,
             u,
             v,
-            sh,
+            shape,
             differentials: RefCell::new(Differentials::empty()),
         }
     }

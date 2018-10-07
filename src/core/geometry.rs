@@ -3,6 +3,7 @@ use core::types::{Float, INFINITY};
 use cgmath::{vec3, prelude::*};
 use core::math::lerp;
 use std::ops::MulAssign;
+use std::ops::Neg;
 
 pub type Point3f = Point3<Float>;
 pub type Vector3f = Vector3<Float>;
@@ -76,15 +77,17 @@ pub struct Normal {
 
 impl Normal {
     pub fn new(x: Float, y: Float, z: Float) -> Normal {
-        Normal::from_vector(vec3(x, y, z))
-    }
-
-    pub fn from_vector(v: Vector3f) -> Normal {
-        Normal { v }
+        Normal{ v: vec3(x, y, z) }
     }
 
     pub fn normalize(&self) -> Normal {
         Normal { v: self.v.normalize() }
+    }
+}
+
+impl From<Vector3f> for Normal {
+    fn from(v: Vector3f) -> Self {
+        Normal { v }
     }
 }
 
@@ -93,6 +96,14 @@ impl MulAssign<Float> for Normal {
         self.v.x *= rhs;
         self.v.y *= rhs;
         self.v.z *= rhs;
+    }
+}
+
+impl Neg for Normal {
+    type Output = Normal;
+
+    fn neg(self) -> Normal {
+        Normal { v: -self.v }
     }
 }
 
@@ -105,6 +116,13 @@ pub fn distance(p1: &Point3f, p2: &Point3f) -> Float {
 pub fn distance_squared(p1: &Point3f, p2: &Point3f) -> Float {
     (p1 - p2).magnitude2()
 }
+
+
+#[inline]
+pub fn faceforward(n: Normal, n2: &Normal) -> Normal {
+    if n.v.dot(n2.v) < 0.0 { -n } else { n }
+}
+
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct BBox {

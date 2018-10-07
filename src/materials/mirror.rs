@@ -1,6 +1,6 @@
 use core::{
     differential_geometry::DifferentialGeometry,
-    material::Material,
+    material::{Material, bump},
     reflection::{FresnelNoOp, BSDF, SpecularReflection},
     spectrum::Spectrum,
     texture::Texture,
@@ -22,16 +22,12 @@ impl MirrorMaterial {
 }
 
 impl Material for MirrorMaterial {
-    fn get_bsdf<'a>(&self, dg_geom: &'a DifferentialGeometry<'a>, dg_shading: &'a DifferentialGeometry<'a>) -> BSDF<'a> {
-        let dgs = if self.bump_map.is_some() {
-            panic!("bump maps not supported") // TODO Bump(bumpMap, dgGeom, dgShading, &dgs);
-        } else {
-            dg_shading
-        };
+    fn get_bsdf<'a>(&self, dg_geom: &DifferentialGeometry<'a>, dg_shading: &DifferentialGeometry<'a>) -> BSDF<'a> {
+        let dgs = self.bump_map.as_ref().map_or_else(|| dg_shading.clone(), |b| bump(b.as_ref(), dg_geom, dg_shading));
+
+        let r = self.kr.evaluate(&dgs).clamp_positive();
 
         let mut bsdf = BSDF::new(dgs, dg_geom.nn);
-
-        let r = self.kr.evaluate(dgs).clamp_positive();
         if !r.is_black() {
             bsdf.add(Box::new(SpecularReflection::new(r, Box::new(FresnelNoOp::default()))));
         }

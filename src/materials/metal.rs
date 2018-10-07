@@ -5,10 +5,9 @@ use core::{
     spectrum::Spectrum,
     texture::Texture,
     types::Float,
-    material::Material,
+    material::{Material, bump},
 };
-use core::reflection::FresnelConductor;
-use core::reflection::Microfacet;
+use core::reflection::{FresnelConductor, Microfacet};
 
 pub struct MetalMaterial {
     eta: Arc<Texture<Spectrum>>,
@@ -27,22 +26,16 @@ impl MetalMaterial {
 }
 
 impl Material for MetalMaterial {
-    fn get_bsdf<'a>(&self, dg_geom: &'a DifferentialGeometry<'a>, dg_shading: &'a DifferentialGeometry<'a>) -> BSDF<'a> {
-        let dgs = if self.bump_map.is_some() {
-            panic!("bump maps not supported") // TODO Bump(bumpMap, dgGeom, dgShading, &dgs);
-        } else {
-            dg_shading
-        };
+    fn get_bsdf<'a>(&self, dg_geom: &DifferentialGeometry<'a>, dg_shading: &DifferentialGeometry<'a>) -> BSDF<'a> {
+        let dgs = self.bump_map.as_ref().map_or_else(|| dg_shading.clone(), |b| bump(b.as_ref(), dg_geom, dg_shading));
 
-        let mut bsdf = BSDF::new(dgs, dg_geom.nn);
-
-        let rough = self.roughness.evaluate(dgs);
+        let rough = self.roughness.evaluate(&dgs);
 
         let md = Blinn::new(1.0 / rough);
-        let fr_mf = FresnelConductor::new(self.eta.evaluate(dgs), self.k.evaluate(dgs));
+        let fr_mf = FresnelConductor::new(self.eta.evaluate(&dgs), self.k.evaluate(&dgs));
 
+        let mut bsdf = BSDF::new(dgs, dg_geom.nn);
         bsdf.add(Box::new(Microfacet::new(Spectrum::white(), Box::new(fr_mf), Box::new(md))));
-
         bsdf
     }
 }
