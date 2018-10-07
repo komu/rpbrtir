@@ -415,6 +415,12 @@ impl Fresnel for FresnelDielectric {
 
 pub struct FresnelNoOp {}
 
+impl Default for FresnelNoOp {
+    fn default() -> Self {
+        FresnelNoOp { }
+    }
+}
+
 impl Fresnel for FresnelNoOp {
     fn evaluate(&self, _cosi: Float) -> Spectrum {
         Spectrum::white()

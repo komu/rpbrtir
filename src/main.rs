@@ -23,7 +23,7 @@ use rpbtrir::{
     films::ImageFilm,
     filters::MitchellFilter,
     lights::PointLight,
-    materials::{MatteMaterial, MetalMaterial},
+    materials::{MatteMaterial, MetalMaterial, MirrorMaterial},
     renderers::SamplerRenderer,
     shapes::Sphere,
     textures::{ConstantTexture, Checkerboard2DTexture, AAMethod},
@@ -38,8 +38,8 @@ fn main() {
     let eye = Point3f::new(13.0, 2.0, -3.0);
     let center = Point3f::new(0.0, 0.0, 0.0);
     let up = vec3(0.0, 1.0, 0.0);
-    let aperture = 0.05;
-    let focal_distance = 15.0;
+    let aperture = 0.0;
+    let focal_distance = 1e10;
     let fov = 20.0;
     let samples_per_pixel = 8;
 
@@ -75,7 +75,7 @@ fn build_scene() -> Scene {
 
     for _ in 0..20 {
         let r = random::<Float>();
-        let material = if r < 0.4 { metal() } else if r < 0.8 { glass() } else { checker_matte(10.0) };
+        let material = if r < 0.3 { metal() } else if r < 0.6 { glass() } else if r < 0.9 { mirror() } else { checker_matte(10.0) };
         primitives.push(geometric_primitive(sphere(Point3f::new(-4.0 + 8.0 * random::<Float>(), 0.5, -4.0 + 8.0 * random::<Float>()), 0.5), material, area_light.clone()));
     }
 
@@ -105,6 +105,10 @@ fn metal() -> Box<Material> {
 
 fn glass() -> Box<Material> {
     Box::new(GlassMaterial::default())
+}
+
+fn mirror() -> Box<Material> {
+    Box::new(MirrorMaterial::default())
 }
 
 fn checker_matte(scale: Float) -> Box<Material> {
