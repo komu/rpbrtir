@@ -2,9 +2,8 @@ use core::{
     rng::RNG,
     sampler::{Sample, Sampler, SamplerWindow},
     types::Float,
+    math::lerp,
 };
-use core::math::lerp;
-use core::sampler::SampleOffset1d;
 
 pub struct RandomSampler {
     window: SamplerWindow,

@@ -9,11 +9,12 @@ use core::geometry::Vector3f;
 use core::types::Float;
 use core::transform::Transform;
 
+#[derive(Clone)]
 pub struct Intersection<'a> {
     pub primitive: &'a Primitive,
     pub dg: DifferentialGeometry<'a>,
     pub ray_epsilon: Float,
-    object_to_world: Transform
+    object_to_world: Transform,
 }
 
 impl<'a> Intersection<'a> {

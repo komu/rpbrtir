@@ -1,5 +1,4 @@
 use core::integrator::SurfaceIntegrator;
-use integrators::WhittedIntegrator;
 use core::renderer::Renderer;
 use core::scene::Scene;
 use core::geometry::RayDifferential;
@@ -12,7 +11,6 @@ use core::integrator::VolumeIntegrator;
 use core::integrator::NoOpVolumeIntegrator;
 use samplers::RandomSampler;
 use core::sampler::SamplerWindow;
-use integrators::DirectLightingIntegrator;
 
 pub struct SamplerRenderer<'a> {
     integrator: Box<SurfaceIntegrator>,
@@ -22,9 +20,9 @@ pub struct SamplerRenderer<'a> {
 }
 
 impl <'a> SamplerRenderer<'a> {
-    pub fn new(camera: &mut Camera, samples_per_pixel: usize) -> SamplerRenderer {
+    pub fn new(camera: &mut Camera, samples_per_pixel: usize, integrator: Box<SurfaceIntegrator>) -> SamplerRenderer {
         SamplerRenderer {
-            integrator: Box::new(DirectLightingIntegrator::default()),
+            integrator,
             volume_integrator: Box::new(NoOpVolumeIntegrator {}),
             camera,
             samples_per_pixel
@@ -57,7 +55,7 @@ impl <'a> SamplerRenderer<'a> {
 impl <'a> Renderer for SamplerRenderer<'a> {
     fn li(&self, scene: &Scene, rd: &mut RayDifferential, sample: Option<&Sample>, rng: &mut RNG) -> Spectrum {
         let li = if let Some(mut isect) = scene.intersect(&mut rd.ray) {
-            self.integrator.li(scene, self, rd, &mut isect, sample, rng)
+            self.integrator.li(scene, self, rd, &mut isect, sample.expect("no sample"), rng)
         } else {
             scene.lights.iter().map(|l| { l.le(rd) }).sum()
         };

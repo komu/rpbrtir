@@ -31,6 +31,7 @@ use rpbtrir::{
 use rpbtrir::core::light::AreaLight;
 use rpbtrir::lights::DiffuseAreaLight;
 use rpbtrir::materials::GlassMaterial;
+use rpbtrir::integrators::PathIntegrator;
 
 fn main() {
     let scene = build_scene();
@@ -42,6 +43,7 @@ fn main() {
     let focal_distance = 1e10;
     let fov = 20.0;
     let samples_per_pixel = 8;
+    let integrator = Box::new(PathIntegrator::default());
 
     let cam_to_world = look_at(&eye, &center, &up);
 
@@ -56,7 +58,7 @@ fn main() {
     {
         let mut cam = PerspectiveCamera::new(&cam_to_world, screen, 0.0, 1.0, aperture, focal_distance, fov, &mut film);
 
-        let mut renderer = SamplerRenderer::new(&mut cam, samples_per_pixel);
+        let mut renderer = SamplerRenderer::new(&mut cam, samples_per_pixel, integrator);
         renderer.render(&scene);
     }
 

@@ -25,7 +25,7 @@ pub trait SurfaceIntegrator: Integrator {
         renderer: &Renderer,
         rd: &RayDifferential,
         isect: &mut Intersection,
-        sample: Option<&Sample>,
+        sample: &Sample,
         rng: &mut RNG) -> Spectrum;
 }
 
@@ -195,12 +195,42 @@ pub fn uniform_sample_one_light(scene: &Scene,
                                 ray_epsilon: Float,
                                 time: Float,
                                 bsdf: &BSDF,
-                                sample: Option<&Sample>,
-                                rng: &RNG,
-                                light_num_offset: SampleOffset1d,
-                                light_sample_offsets: &[LightSampleOffsets],
-                                bsdf_sample_offsets: &[BSDFSampleOffsets]) -> Spectrum {
-    unimplemented!()
+                                sample: &Sample,
+                                rng: &mut RNG,
+                                light_num_offset: Option<SampleOffset1d>,
+                                light_sample_offset: Option<&LightSampleOffsets>,
+                                bsdf_sample_offset: Option<&BSDFSampleOffsets>) -> Spectrum {
+    // Randomly choose a single light to sample, _light_
+    let n_lights = scene.lights.len();
+    if n_lights == 0 {
+        return Spectrum::black();
+    }
+
+    let mut light_num = if let Some(offset) = light_num_offset {
+        (sample[offset][0] * (n_lights as Float)).floor() as usize
+    } else {
+        (rng.random_float() * (n_lights as Float)).floor() as usize
+    };
+
+    light_num = light_num.min(n_lights - 1);
+    let light = &scene.lights[light_num];
+
+    // Initialize light and bsdf samples for single light sample
+    let light_sample: LightSample;
+    let bsdf_sample: BSDFSample;
+    if light_sample_offset.is_some() && bsdf_sample_offset.is_some() {
+        light_sample = LightSample::new(sample, light_sample_offset.unwrap(), 0);
+        bsdf_sample = BSDFSample::new(sample, bsdf_sample_offset.unwrap(), 0);
+    } else {
+        light_sample = LightSample::gen(rng);
+        bsdf_sample = BSDFSample::gen(rng);
+    }
+
+    return (n_lights as Float) *
+        estimate_direct(scene, renderer, light.as_ref(), p, n, wo,
+                        ray_epsilon, time, bsdf, rng, &light_sample,
+                        &bsdf_sample, BxDFType::BSDF_ALL & !BxDFType::BSDF_SPECULAR);
+
 }
 
 fn estimate_direct(scene: &Scene,

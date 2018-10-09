@@ -7,6 +7,7 @@ use std::iter::Sum;
 use core::math::clamp;
 use std::ops::Sub;
 use std::ops::MulAssign;
+use std::ops::DivAssign;
 
 #[derive(Clone, Copy)]
 pub struct Spectrum {
@@ -45,8 +46,13 @@ impl Spectrum {
         Spectrum {
             r: clamp(self.r, low, high),
             g: clamp(self.g, low, high),
-            b: clamp(self.b, low, high)
+            b: clamp(self.b, low, high),
         }
+    }
+
+    pub fn y(&self) -> Float {
+        let yweight = [0.212671, 0.715160, 0.072169];
+        return yweight[0] * self.r + yweight[1] * self.g + yweight[2] * self.b;
     }
 }
 
@@ -111,7 +117,7 @@ impl Mul<Spectrum> for Float {
         Spectrum {
             r: self * rhs.r,
             g: self * rhs.g,
-            b: self * rhs.b
+            b: self * rhs.b,
         }
     }
 }
@@ -121,6 +127,14 @@ impl MulAssign<Float> for Spectrum {
         self.r *= rhs;
         self.g *= rhs;
         self.b *= rhs;
+    }
+}
+
+impl MulAssign<Spectrum> for Spectrum {
+    fn mul_assign(&mut self, rhs: Spectrum) {
+        self.r *= rhs.r;
+        self.g *= rhs.g;
+        self.b *= rhs.b;
     }
 }
 
@@ -145,6 +159,14 @@ impl Div<Spectrum> for Spectrum {
             g: self.g / rhs.g,
             b: self.b / rhs.b,
         }
+    }
+}
+
+impl DivAssign<Float> for Spectrum {
+    fn div_assign(&mut self, rhs: Float) {
+        self.r /= rhs;
+        self.g /= rhs;
+        self.b /= rhs;
     }
 }
 

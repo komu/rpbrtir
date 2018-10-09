@@ -94,7 +94,7 @@ impl<'a> BSDF<'a> {
             .sum()
     }
 
-    pub fn sample_f(&self, wo_w: &Vector3f, bsdf_sample: &BSDFSample, mut flags: BxDFType) -> Option<(Spectrum, Vector3f, Float, BxDFType)> {
+    pub fn sample_f(&self, wo_w: &Vector3f, bsdf_sample: &BSDFSample, flags: BxDFType) -> Option<(Spectrum, Vector3f, Float, BxDFType)> {
         // Choose which _BxDF_ to sample
         let matching_comps = self.num_components(flags);
 
@@ -131,6 +131,7 @@ impl<'a> BSDF<'a> {
             pdf /= matching_comps as Float;
         }
 
+        let mut flags = flags;
         // Compute value of BSDF for sampled direction
         if !bxdf.bxdf_type().contains(BxDFType::BSDF_SPECULAR) {
             f = Spectrum::black();

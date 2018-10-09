@@ -41,6 +41,7 @@ pub struct RayDifferential {
     pub differentials: Option<RayDifferentials>,
 }
 
+#[derive(Clone)]
 pub struct RayDifferentials {
     pub rx_origin: Point3f,
     pub ry_origin: Point3f,
@@ -67,6 +68,16 @@ impl RayDifferential {
 
     pub fn has_nans(&self) -> bool {
         self.ray.has_nans()
+    }
+
+    pub fn copy(rd: &RayDifferential) -> RayDifferential {
+        RayDifferential { ray: rd.ray.clone(), differentials: rd.differentials.clone() }
+    }
+}
+
+impl Clone for RayDifferential {
+    fn clone(&self) -> Self {
+        RayDifferential { ray: self.ray.clone(), differentials: self.differentials.clone() }
     }
 }
 

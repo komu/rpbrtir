@@ -30,7 +30,7 @@ impl SurfaceIntegrator for WhittedIntegrator {
         renderer: &Renderer,
         rd: &RayDifferential,
         isect: &mut Intersection,
-        sample: Option<&Sample>,
+        sample: &Sample,
         rng: &mut RNG) -> Spectrum {
 
         // Compute emitted and reflected light at ray intersection point
@@ -59,13 +59,13 @@ impl SurfaceIntegrator for WhittedIntegrator {
 
             let f = bsdf.f_all(&wo, &wi);
             if !f.is_black() && visibility.unoccluded(&scene) {
-                l += f * li * wi.dot(n.v).abs() * visibility.transmittance(scene, renderer, sample, rng) / pdf;
+                l += f * li * wi.dot(n.v).abs() * visibility.transmittance(scene, renderer, Some(sample), rng) / pdf;
             }
         }
         if rd.ray.depth + 1 < self.max_depth {
             // Trace rays for specular reflection and refraction
-            l += specular_reflect(rd, &bsdf, rng, &isect, renderer, scene, sample);
-            l += specular_transmit(rd, &bsdf, rng, &isect, renderer, scene, sample);
+            l += specular_reflect(rd, &bsdf, rng, &isect, renderer, scene, Some(sample));
+            l += specular_transmit(rd, &bsdf, rng, &isect, renderer, scene, Some(sample));
         }
         l
     }

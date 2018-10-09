@@ -41,7 +41,7 @@ impl Default for DirectLightingIntegrator {
 }
 
 impl SurfaceIntegrator for DirectLightingIntegrator {
-    fn li(&self, scene: &Scene, renderer: &Renderer, rd: &RayDifferential, isect: &mut Intersection, sample: Option<&Sample>, rng: &mut RNG) -> Spectrum {
+    fn li(&self, scene: &Scene, renderer: &Renderer, rd: &RayDifferential, isect: &mut Intersection, sample: &Sample, rng: &mut RNG) -> Spectrum {
         let mut l = Spectrum::black();
 
         // Evaluate BSDF at hit point
@@ -58,19 +58,19 @@ impl SurfaceIntegrator for DirectLightingIntegrator {
             l += match self.strategy {
                 LightStrategy::SampleAllUniform =>
                     uniform_sample_all_lights(scene, renderer, &p, &n, &wo,
-                                           isect.ray_epsilon, rd.ray.time, &bsdf, sample.expect("no sample"), rng,
+                                           isect.ray_epsilon, rd.ray.time, &bsdf, sample, rng,
                                            Some(&self.light_sample_offsets), Some(&self.bsdf_sample_offsets)),
                 LightStrategy::SampleOneUniform =>
                     uniform_sample_one_light(scene, renderer, &p, &n, &wo,
                                           isect.ray_epsilon, rd.ray.time, &bsdf, sample, rng,
-                                          self.light_num_offset.expect("no light_num_offset"), &self.light_sample_offsets, &self.bsdf_sample_offsets)
+                                          self.light_num_offset, Some(&self.light_sample_offsets[0]), Some(&self.bsdf_sample_offsets[0]))
             }
         }
 
         if rd.ray.depth + 1 < self.max_depth {
             // Trace rays for specular reflection and refraction
-            l += specular_reflect(rd, &bsdf, rng, isect, renderer, scene, sample);
-            l += specular_transmit(rd, &bsdf, rng, isect, renderer, scene, sample);
+            l += specular_reflect(rd, &bsdf, rng, isect, renderer, scene, Some(sample));
+            l += specular_transmit(rd, &bsdf, rng, isect, renderer, scene, Some(sample));
         }
 
         l
