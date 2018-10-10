@@ -32,8 +32,10 @@ use rpbtrir::core::light::AreaLight;
 use rpbtrir::lights::DiffuseAreaLight;
 use rpbtrir::materials::GlassMaterial;
 use rpbtrir::integrators::PathIntegrator;
+use std::time::Instant;
 
 fn main() {
+    let start = Instant::now();
     let scene = build_scene();
 
     let eye = Point3f::new(13.0, 2.0, -3.0);
@@ -63,6 +65,9 @@ fn main() {
     }
 
     film.write_image();
+
+    let elapsed_seconds = start.elapsed().as_secs();
+    println!("rendered scene in {} seconds", elapsed_seconds);
 }
 
 fn build_scene() -> Scene {
